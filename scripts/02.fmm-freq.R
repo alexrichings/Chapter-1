@@ -389,8 +389,21 @@ inputs <- inputs %>%
   left_join(deng2_prob %>% select(serosurvey_id, deng2_prob = y), by = "serosurvey_id") %>% 
   left_join(deng3_prob %>% select(serosurvey_id, deng3_prob = y), by = "serosurvey_id") %>% 
   left_join(deng4_prob %>% select(serosurvey_id, deng4_prob = y), by = "serosurvey_id") 
+
+--------------------------------------------------------------------------
   
-# 7. Save data ---- 
+# 8. Description of boosts ----
+
+# proportion boosting 
+
+# 5.78% with evidence of boosting to any serotype (2021-22)
+round(prop.table(table(inputs$deng_boost, useNA = "ifany")) * 100, 2)
+
+round(prop.table(table(inputs$deng_boost, inputs$age_group, useNA = "ifany")) * 100, 2) 
+round(prop.table(table(inputs$deng_boost, inputs$gender_cohort, useNA = "ifany")) * 100, 2) 
+round(prop.table(table(inputs$deng_boost, inputs$region, useNA = "ifany")) * 100, 2) 
+
+# 9. Save data ---- 
 
 saveRDS(inputs, here("data", "inputs.rds"))
 
