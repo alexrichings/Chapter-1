@@ -1,9 +1,8 @@
 
-
 # Dominican Republic Study Data Exploration ----  
 
 -------------------------------------------------------------------------------
-  # 1. Install and load packages ----
+# 1. Install and load packages ----
 
 library("readxl")
 library("ggplot2")
@@ -14,25 +13,24 @@ library("gtsummary")
 library("serofoi")
 library("janitor")
 library("tidyr")
--------------------------------------------------------------------------------
-  # 2. Load in the data ----
+library("here")
 
-df_0 <- read_excel("Data/DR_surveillance/EN/Copy of DR_serosurvey_MASTER_with_MBA_UPDATED.xlsx")
-df_1 <- read_excel("Data/DR_surveillance/EN/Copy of FINAL_COHORT_PLUS_MBA.xlsx")
 -------------------------------------------------------------------------------
-  # 3. Inspect the variables ----
+# 2. Load in the data ----
 
-names(df_0)
-View(df_1)
+df_0 <- read_excel(here("data", "Copy of DR_serosurvey_MASTER_with_MBA_UPDATED.xlsx"))
+df_1 <- read_excel(here("data", "Copy of FINAL_COHORT_PLUS_MBA.xlsx"))
+                   
+-------------------------------------------------------------------------------
+# 3. Inspect the variables ----
 
 length(unique(df_0$serosurvey_id))
 length(unique(df_1$cohort_id))
 
-df_1 <- df_1 %>% relocate(age, .after = serosurvey_id) 
 -------------------------------------------------------------------------------
-  # 4. Basic descriptive analysis ----
+# 4. Basic descriptive analysis ----
 
-# Seroprevalence ----
+# Seroprevalence 
 summary(df_0$dengns1_1_seropos) # DENV1: 93% 
 summary(df_0$dengns1_2_seropos) # DENV2: 92% 
 summary(df_0$dengns1_3_seropos) # DENV3: 95% 
@@ -41,7 +39,7 @@ summary(df_0$zika_ns1_seropos) # ZIKV: 75%
 summary(df_0$chik_e1_seropos) # DENV1: 74% 
 
 -------------------------------------------------------------------------------
-  # 6. Accounting for pairing structure ---- 
+# 6. Accounting for pairing structure ---- 
 
 df_wide <- df_0 %>%
   select(serosurvey_id, age, gender, setting, occupation, education, province, region, occupation_2, education2) %>%
@@ -66,41 +64,35 @@ df_wide <- df_0 %>%
     change_chik_e1   = chik_e1_mfi_cohort   - chik_e1_mfi_sero
   )
 
-df_0[df_0$serosurvey_id == "BWHDRSERO20_1002", "age"]
-df_1[df_1$serosurvey_id == "BWHDRSERO20_1002", "age"]
-df_1[df_1$serosurvey_id == "BWHDRSERO20_1001", "dengns1_1_mfi_cohort"]
-
-table(df_0$occupation_2, useNA = "ifany")
-table(df_0$education2, useNA = "ifany")
 -------------------------------------------------------------------------------
-  # 7. Explore pairing ---- 
+# 7. Explore pairing ---- 
 
-# look at changes in MFI ----
+# look at changes in MFI 
 
 # deng1
 ggplot(data = df_wide, mapping = aes(change_dengns1_1/1000)) + 
   geom_density(stat = "density", alpha = 0.7, fill = "skyblue") + 
-  labs(x = "∆MFI for DENV1",
+  labs(x = "∆MFI",
        y = "Density",
-       title = "Change in DENV1 MFI") + 
+       title = "DENV1") + 
   theme_minimal() + 
-  coord_cartesian(xlim = c(-15, 15))
+  xlim(c(-15,15))
 
 # deng2
-ggplot(data = df_wide, mapping = aes((change_dengns1_2/1000))) + 
+ggplot(data = df_wide, mapping = aes(change_dengns1_2/1000)) + 
   geom_density(stat = "density", alpha = 0.7, fill = "skyblue") + 
-  labs(x = "∆MFI for DENV2",
+  labs(x = "∆MFI",
        y = "Density",
-       title = "Change in DENV2 MFI") + 
+       title = "DENV2") + 
   theme_minimal() + 
-  coord_cartesian(xlim = c(-15, 15))
+  xlim(c(-15,15))
 
 # deng3
 ggplot(data = df_wide, mapping = aes((change_dengns1_3/1000))) + 
   geom_density(stat = "density", alpha = 0.7, fill = "skyblue") + 
-  labs(x = "∆MFI for DENV3",
+  labs(x = "∆MFI",
        y = "Density",
-       title = "Change in DENV3 MFI") + 
+       title = "DENV3") + 
   theme_minimal() + 
   coord_cartesian(xlim = c(-15, 15))
 
@@ -113,7 +105,7 @@ ggplot(data = df_wide, mapping = aes((change_dengns1_4/1000))) +
   theme_minimal() + 
   coord_cartesian(xlim = c(-15, 15))
 
-# plot all on the same axis ----
+# plot all on the same axis
 
 ggplot(data = df_wide) + 
   geom_density(aes(x = (change_dengns1_1/1000), fill = "DENV1"), alpha = 0.5) + 
@@ -130,25 +122,25 @@ ggplot(data = df_wide) +
 # chik
 ggplot(data = df_wide, mapping = aes(change_chik_e1/1000)) + 
   geom_density(stat = "density", alpha = 0.7, fill = "skyblue") + 
-  labs(x = "∆MFI for CHIKV",
+  labs(x = "∆MFI",
        y = "Density",
-       title = "Change in CHIKV MFI") + 
+       title = "CHIKV") + 
   theme_minimal() +
   coord_cartesian(xlim = c(-15, 15))
 
 # zika
 ggplot(data = df_wide, mapping = aes(change_zika_ns1/1000)) + 
   geom_density(stat = "density", alpha = 0.7, fill = "skyblue") + 
-  labs(x = "∆MFI for ZIKV",
+  labs(x = "∆MFI",
        y = "Density",
-       title = "Change in ZIKV MFI") + 
+       title = "ZIKV") + 
   theme_minimal() +
   coord_cartesian(xlim = c(-15, 15))
 
 -------------------------------------------
 
-# save the wide data frame 
+# 8. Save data ----
 
 saveRDS(df_wide, "Data/DR_surveillance/EN/df_wide")
 
-View(df_wide)
+
