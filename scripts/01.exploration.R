@@ -1,6 +1,7 @@
 
-# Dominican Republic Study Data Exploration ----  
+# 01.exploration ----  
 
+# preliminary description and visualisation of data from the Dominican Republic 
 -------------------------------------------------------------------------------
 # 1. Install and load packages ----
 
@@ -119,28 +120,10 @@ ggplot(data = df_wide) +
   theme_minimal() +
   coord_cartesian(xlim = c(-15, 15))
 
-# chik
-ggplot(data = df_wide, mapping = aes(change_chik_e1/1000)) + 
-  geom_density(stat = "density", alpha = 0.7, fill = "skyblue") + 
-  labs(x = "∆MFI",
-       y = "Density",
-       title = "CHIKV") + 
-  theme_minimal() +
-  coord_cartesian(xlim = c(-15, 15))
-
-# zika
-ggplot(data = df_wide, mapping = aes(change_zika_ns1/1000)) + 
-  geom_density(stat = "density", alpha = 0.7, fill = "skyblue") + 
-  labs(x = "∆MFI",
-       y = "Density",
-       title = "ZIKV") + 
-  theme_minimal() +
-  coord_cartesian(xlim = c(-15, 15))
-
 -------------------------------------------
 
 # 8. Save data ----
 
-saveRDS(df_wide, "Data/DR_surveillance/EN/df_wide")
+# saveRDS(df_wide, here("data", "df_wide.rds"))
 
 
