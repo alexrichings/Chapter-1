@@ -1,5 +1,5 @@
 
-# 06. Bayesian framework for mixture modelling
+# 04. Bayesian framework for mixture modelling
 ------------------------------------------------------------
 
 # 1. Install and load packages ----
@@ -80,25 +80,48 @@ print(deng4_fit)
 
 ------------------------------------------------------------
 
-#### Vibe-coded ----
-  
 # 3. Assess model output  ----
 
-
 # 3a. Extract posteriors
-posterior <- as.data.frame(fit)
+post_deng1 <- as.data.frame(deng1_fit)
+post_deng2 <- as.data.frame(deng2_fit)
+post_deng3 <- as.data.frame(deng3_fit)
+post_deng4 <- as.data.frame(deng4_fit)
+
+# set seed 
 set.seed(123)
 
-# randomly sample 200 rows from the posterior
-idx <- sample(nrow(posterior), 200)
+# randomly sample 200 rows fromo posterior 
+idx_deng1 <- sample(nrow(post_deng1), 200)
+idx_deng2 <- sample(nrow(post_deng2), 200)
+idx_deng3 <- sample(nrow(post_deng3), 200)
+idx_deng4 <- sample(nrow(post_deng4), 200)
 
 # sequences within full and positive bounds
-x_all      <- seq(min(y_clean, na.rm = TRUE), max(y_clean, na.rm = TRUE), length.out = 1000)
-x_positive <- seq(0.001, max(y_clean, na.rm = TRUE), length.out = 1000)
+x_all_deng1 <- seq(min(deng1_clean, na.rm = TRUE), max(deng1_clean, na.rm = TRUE), length.out = 1000)
+x_all_deng2 <- seq(min(deng2_clean, na.rm = TRUE), max(deng2_clean, na.rm = TRUE), length.out = 1000)
+x_all_deng3 <- seq(min(deng3_clean, na.rm = TRUE), max(deng3_clean, na.rm = TRUE), length.out = 1000)
+x_all_deng4 <- seq(min(deng4_clean, na.rm = TRUE), max(deng4_clean, na.rm = TRUE), length.out = 1000)
+
+x_pos_deng1 <- seq(0.001, max(deng1_clean, na.rm = TRUE), length.out = 1000)
+x_pos_deng2 <- seq(0.001, max(deng2_clean, na.rm = TRUE), length.out = 1000)
+x_pos_deng3 <- seq(0.001, max(deng3_clean, na.rm = TRUE), length.out = 1000)
+x_pos_deng4 <- seq(0.001, max(deng4_clean, na.rm = TRUE), length.out = 1000)
 
 # pre-define matrices for posterior samples
-mixture_samples <- matrix(NA, nrow = length(x_all), ncol = 200)
-prob_samples    <- matrix(NA, nrow = length(x_positive), ncol = 200)
+mix_deng1 <- matrix(NA, nrow = length(x_all_deng1), ncol = 200)
+mix_deng2 <- matrix(NA, nrow = length(x_all_deng2), ncol = 200)
+mix_deng3 <- matrix(NA, nrow = length(x_all_deng3), ncol = 200)
+mix_deng4 <- matrix(NA, nrow = length(x_all_deng4), ncol = 200)
+
+prob_deng1 <- matrix(NA, nrow = length(x_pos_deng1), ncol = 200)
+prob_deng2 <- matrix(NA, nrow = length(x_pos_deng2), ncol = 200)
+prob_deng3 <- matrix(NA, nrow = length(x_pos_deng3), ncol = 200)
+prob_deng4 <- matrix(NA, nrow = length(x_pos_deng4), ncol = 200)
+
+
+# estimate probability of boosting 
+idx <- idx_deng1
 
 for (j in seq_along(idx)) {
   i        <- idx[j]
@@ -107,10 +130,8 @@ for (j in seq_along(idx)) {
   b1_i     <- posterior$b1[i]
   lambda_i <- posterior$lambda[i]
   
-  # mixture density over full range (mu fixed at 0)
-  mixture_samples[, j] <-
-    (1 - lambda_i) * dnorm(x_all, mean = 0, sd = sigma_i) +
-    lambda_i * ifelse(x_all > 0, dgamma(x_all, shape = alpha_i, scale = b1_i), 0)
+  # mixture density over full range 
+  mixture_samples[, j] <- (1 - lambda_i) * dnorm(x_all, mean = 0, sd = sigma_i) + lambda_i * ifelse(x_all > 0, dgamma(x_all, shape = alpha_i, scale = b1_i), 0)
   
   # p(Gamma | y) over positive range
   numerator         <- lambda_i * dgamma(x_positive, shape = alpha_i, scale = b1_i)
