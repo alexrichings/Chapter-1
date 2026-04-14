@@ -110,7 +110,7 @@ daily_cases_combined <- bind_rows(df_pre22, df_post22) %>% arrange(date)
 # 4. Plot ----
 
 # daily cases 
-p <- ggplot(daily_cases_combined, aes(x = date, y = cases)) +
+ggplot(daily_cases_combined, aes(x = date, y = cases)) +
   geom_line(colour = "#2E86C1", linewidth = 0.1, alpha = 0.7) +
   labs(
     x = "Date of symptom onset",
@@ -133,4 +133,5 @@ p <- ggplot(daily_cases_combined, aes(x = date, y = cases)) +
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
 
-p
+ggsave(here("outputs", "dengue_dr_case_series.png"), width = 10, height = 6, dpi = 300)
+
