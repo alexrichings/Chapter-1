@@ -8,7 +8,6 @@ library(readxl)
 library(dplyr)
 library(tidyr)
 library(ISOweek)
-library(GHRexplore)
 library(ggplot2)
 library(here)
 library(lubridate)
@@ -17,6 +16,7 @@ library(lubridate)
   
 # 2. Load data ----
 
+# data from end of 2017 until 2023 
 data <- read_xlsx(here("data", "dengue-digepi_10-08-23.xlsx"))
 
 data_2013 <- read_csv(here("data", "2013 etv.csv"))
@@ -37,6 +37,8 @@ data_2021 <- read_csv(here("data", "etv 2021.csv"))
 # need to go back and separate each year in the data sets 
 
 # add to a list 
+# overlap between year ends 
+
 df_list <- list(
   data_2013,
   data_2014,
@@ -49,9 +51,10 @@ df_list <- list(
   data_2021
 )
 
+# df for all data from 2013-2021 
 df <- bind_rows(df_list)
 
-# rename variables 
+# rename variables for 2013-2021
 df_data <- df %>%
   rename(
     week = `Semana inicio síntomas`,
@@ -59,6 +62,7 @@ df_data <- df %>%
     year = `Año inicio síntomas`
   )
 
+# rename variables for 2017-2023
 df_data_mix <- data %>%
   rename(
     week = `Semana inicio síntomas`,
@@ -67,7 +71,7 @@ df_data_mix <- data %>%
   )
 
 # align cases by day 
-daily_cases <- df_data %>%
+daily_cases_13_21 <- df_data %>%
   mutate(date = dmy(`Fecha inicio síntomas`)) %>%
   filter(!is.na(date)) %>%
   count(date, name = "cases") %>%
@@ -77,7 +81,7 @@ daily_cases <- df_data %>%
     fill = list(cases = 0)
   )
 
-daily_cases_data <- data %>%
+daily_cases_17_23 <- data %>%
   mutate(date = as.Date(`Fecha inicio síntomas`)) %>%
   filter(!is.na(date)) %>%
   count(date, name = "cases") %>%
@@ -87,97 +91,26 @@ daily_cases_data <- data %>%
     fill = list(cases = 0)
   )
 
-# align cases by week 
-weekly_cases <- df_data %>%
-  filter(!is.na(year), !is.na(week)) %>%
-  mutate(
-    year = as.integer(year),
-    week = as.integer(week),
-    week_date = ISOweek2date(
-      paste0(year, "-W", sprintf("%02d", week), "-1")
-    )
-  ) %>%
-  count(week_date, name = "cases") %>%
-  arrange(week_date) %>%
-  complete(
-    week_date = seq(min(week_date), max(week_date), by = "week"),
-    fill = list(cases = 0)
-  )
-
-weekly_cases_mix <- df_data_mix %>%
-  filter(!is.na(year), !is.na(week)) %>%
-  mutate(
-    year = as.integer(year),
-    week = as.integer(week),
-    week_date = ISOweek2date(
-      paste0(year, "-W", sprintf("%02d", week), "-1")
-    )
-  ) %>%
-  count(week_date, name = "cases") %>%
-  arrange(week_date) %>%
-  complete(
-    week_date = seq(min(week_date), max(week_date), by = "week"),
-    fill = list(cases = 0)
-  )
-
-# align weekly cases by province 
-weekly_cases_prov <- data %>%
-  filter(!is.na(year), !is.na(week), !is.na(Provincia)) %>%
-  mutate(
-    year = as.integer(year),
-    week = as.integer(week),
-    week_date = ISOweek2date(paste0(year, "-W", sprintf("%02d", week), "-1"))
-  ) %>%
-  count(Provincia, week_date, name = "cases") %>%
-  arrange(Provincia, week_date) %>%
-  group_by(Provincia) %>%
-  complete(
-    week_date = seq(min(week_date), max(week_date), by = "week"),
-    fill = list(cases = 0)
-  ) %>%
-  ungroup()
 
 # join the two data sets 
 
-# Take daily_cases up to end of 2021
-df_data_portion <- daily_cases %>%
+# daily_cases up to end of 2021
+df_pre22 <- daily_cases_13_21 %>%
   filter(date <= as.Date("2021-12-31"))
 
-# Take daily_cases_data from 2022 onwards
-data_portion <- daily_cases_data %>%
+# daily_cases_data from 2022 onwards
+df_post22 <- daily_cases_17_23 %>%
   filter(date >= as.Date("2021-06-01"))
 
-# Bind together
-daily_cases_combined <- bind_rows(df_data_portion, data_portion) %>%
-  arrange(date)
+# bind
+daily_cases_combined <- bind_rows(df_pre22, df_post22) %>% arrange(date)
 
 ------------------------------------------------------------
   
 # 4. Plot ----
 
 # daily cases 
-ggplot(daily_cases, aes(x = date, y = cases)) +
-  geom_line() +
-  labs(x = "Date", y = "Cases", title = "Daily dengue cases in Dominican Republic (2000 - 2021)") + 
-  theme_minimal() + 
-  scale_x_date(limits = as.Date(c("2013-01-01", "2021-06-01"))) + 
-  ylim(0,200)
-
-ggplot(daily_cases_data, aes(x = date, y = cases)) +
-  geom_line() +
-  labs(x = "Date", y = "Cases", title = "Daily dengue cases in Dominican Republic (2017 - 2023)") +
-  theme_minimal() +
-  scale_x_date(limits = as.Date(c("2021-06-01", "2023-12-31"))) + 
-  ylim(0,200)
-
-ggplot(daily_cases_combined, aes(x = date, y = cases)) +
-  geom_line() +
-  labs(x = "Date", y = "Cases", title = "Daily dengue cases in Dominican Republic (2012 - 2023)") +
-  theme_minimal() +
-  scale_x_date(limits = as.Date(c("2013-01-01", "2023-12-31"))) + 
-  ylim(0,200)
-
-ggplot(daily_cases_combined, aes(x = date, y = cases)) +
+p <- ggplot(daily_cases_combined, aes(x = date, y = cases)) +
   geom_line(colour = "#2E86C1", linewidth = 0.1, alpha = 0.7) +
   labs(
     x = "Date of symptom onset",
@@ -200,12 +133,4 @@ ggplot(daily_cases_combined, aes(x = date, y = cases)) +
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
 
-# weekly cases by province
-ggplot(weekly_cases_prov, aes(x = week_date, y = cases, colour = Provincia)) +
-  geom_line() +
-  labs(x = "Week", y = "Cases", title = "Weekly dengue cases by Provincia") +
-  theme_minimal()
-
-# plot time series with GHRmodel package
-plot_timeseries(weekly_cases_prov, var = "cases", type = "counts", time = "week_date", area = "Provincia")
-
+p
