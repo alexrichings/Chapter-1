@@ -12,12 +12,13 @@ library(gtsummary)
 library(stringr)
 library(here)
 library(readr)
+library(colorspace)
 
 ------------------------------------------------------------------------
   
 # 2. Data ---- 
 
-inputs <- readRDS(here("data", "inputs.rds"))
+inputs <- readRDS(here("data", "inputs_fj.rds"))
 
 deng1_n97_lr <- read.csv(here("outputs", "lr_deng1_n97.csv"))
 deng3_n97_lr <- read.csv(here("outputs", "lr_deng3_n97.csv"))
@@ -100,40 +101,56 @@ ggsave(here("outputs", "forest_4p.png"), width = 8, height = 6, dpi = 300)
 
 # Forest plot without serotype ---- 
 
+# just plot logistic regression output 
 collapsed_df <- bind_rows(
   add_or_ci(lr_deng_n97 , outcome="DENV", model="LR", sample="Reduced"),
-  add_or_ci(lr_deng_n260, outcome="DENV", model="LR", sample="Total"),
-  add_or_ci(flr_deng_n97, outcome="DENV", model="FLR", sample="Reduced"),
-  add_or_ci(flr_deng_n260, outcome="DENV", model="FLR", sample="Total")
+  add_or_ci(lr_deng_n260, outcome="DENV", model="LR", sample="Total")
+  # ,
+  # add_or_ci(flr_deng_n97, outcome="DENV", model="FLR", sample="Reduced"),
+  # add_or_ci(flr_deng_n260, outcome="DENV", model="FLR", sample="Total")
 ) %>%
   mutate(var = factor(var, levels = rev(unique(var))))
 
-# plot the forest plot 
+# add outcome for facet 
+collapsed_df$outcome <- "DENV"
+
+# rename labels 
+var_labels <- c(
+  AGE_U_20 = "Age under 20",
+  SEX = "Male",
+  ETHNIC = "iTaukei ethnicity",
+  I_MOS = "Mosquito exposure",
+  I_TIR = "Used car tires",
+  I_WAT = "Open water container(s)",
+  I_AC = "Air conditioning",
+  I_BLK = "Blocked drains",
+  GEOG = "Urban or peri-urban",
+  FEVER_2YR = "Fever (past 2 years)",
+  DOC_2YR = "Doctor visit (past 2 years)",
+  HH_D = "Cohabitant doctor visit (past 2 years)"
+)
+
+# forest plot 
 forest_collapsed <- 
-  ggplot(collapsed_df, aes(x = OR, y = var, colour = model)) +
+  ggplot(collapsed_df, aes(x = OR, y = var, colour = sample)) +
   geom_vline(xintercept = 1, linetype = "dashed", colour = "grey40") +
-  geom_errorbarh(aes(xmin = LCL, xmax = UCL),
-                 position = position_dodge(width = 0.6),
-                 height = 0.2) +
+  geom_errorbarh(aes(xmin = LCL, xmax = UCL), position = position_dodge(width = 0.6), height = 0.2) +
   geom_point(position = position_dodge(width = 0.6), size = 2.8) +
+  scale_y_discrete(labels = var_labels) + 
   scale_x_log10() +
-  facet_grid(outcome ~ sample, switch = "y") +
+  facet_grid(. ~ outcome) +   
   labs(
     x = "Odds Ratio (log scale)",
     y = "",
-    colour = "Model",
-    title = "Risk factors for DENV infection in Fiji (2013 - 2015)"
+    colour = "Data"
   ) +
   theme_minimal(base_size = 13) +
   theme(
-    
     panel.border = element_rect(fill = NA, linewidth = 0.8, colour = "grey35"),
-    panel.spacing = unit(1.2, "lines"),
-    
     strip.background = element_rect(fill = "grey90", colour = "grey35", linewidth = 0.8),
     strip.text = element_text(face = "bold"),
     strip.placement = "outside",
-    
+    panel.spacing = unit(0, "lines"), 
     panel.grid.minor = element_blank(),
     panel.grid.major.y = element_blank()
   )
