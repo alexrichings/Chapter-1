@@ -17,7 +17,7 @@ library(readr)
   
 # 2. Data ---- 
 
-inputs <- readRDS(here("data", "inputs.rds"))
+inputs <- readRDS(here("data", "inputs_fj.rds"))
 
 ------------------------------------------------------------------------
  
@@ -28,7 +28,7 @@ inputs <- readRDS(here("data", "inputs.rds"))
 table(inputs$denv3_prob, useNA = "ifany") # 3 NA values present 
 table(inputs$denv1_prob, useNA = "ifany") # 12 NA values present 
 
-# eLife paper uses sum(inputs$ELISA1<=9)
+# subset to seronegatives 
 inputs_og <- inputs %>% filter(inputs$ELISA1<=9)
 
 # tabulate the characteristics 
