@@ -156,7 +156,7 @@ forest_collapsed_lr_fiji <-
   )
 
 forest_collapsed_lr_fiji
-ggsave(here("outputs", "forest_collapsed_lr_fiji.png"), width = 10, height = 6, dpi = 300)
+ggsave(here("outputs", "forest_collapsed_lr_fiji.png"), width = 12, height = 6, dpi = 300)
 
 ---------------------------------------------------------------------------------------
 
