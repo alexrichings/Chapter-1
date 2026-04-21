@@ -25,15 +25,12 @@ df_wide <- readRDS(here("data", "df_wide.rds"))
 inputs <- df_wide
 
 # scale the data 
+
+# changes in MFI 
 inputs$change_dengns1_1_scale <- inputs$change_dengns1_1/1000
 inputs$change_dengns1_2_scale <- inputs$change_dengns1_2/1000
 inputs$change_dengns1_3_scale <- inputs$change_dengns1_3/1000
 inputs$change_dengns1_4_scale <- inputs$change_dengns1_4/1000
-
-inputs$dengns1_1_scale <- inputs$dengns1_1_mfi_sero/1000
-inputs$dengns1_2_scale <- inputs$dengns1_2_mfi_sero/1000
-inputs$dengns1_3_scale <- inputs$dengns1_2_mfi_sero/1000
-inputs$dengns1_4_scale <- inputs$dengns1_4_mfi_sero/1000
 
 --------------------------------------------------------------------------
 
@@ -322,9 +319,9 @@ ggplot() +
     axis.ticks         = element_line(colour = "black"),
     axis.text          = element_text(size = 12),
     axis.title.y.left  = element_text(size = 12, angle = 90),
-    axis.text.y.left   = element_text(size = 12, colour = "black", angle = 90, hjust = 0.5),
+    axis.text.y.left   = element_text(size = 12, colour = "black", hjust = 0.5),
     axis.title.y.right = element_text(size = 12, angle = -90, colour = "#7994B2"),
-    axis.text.y.right  = element_text(size = 12, colour = "#7994B2", angle = -90, hjust = 0.5),
+    axis.text.y.right  = element_text(size = 12, colour = "#7994B2", hjust = 0.5),
     axis.ticks.y.right = element_line(colour = "#7994B2"),
     axis.line.y.right  = element_line(colour = "#7994B2"),
     plot.title         = element_text(size = 13)
@@ -353,9 +350,9 @@ ggplot() +
     axis.ticks         = element_line(colour = "black"),
     axis.text          = element_text(size = 12),
     axis.title.y.left  = element_text(size = 12, angle = 90),
-    axis.text.y.left   = element_text(size = 12, colour = "black", angle = 90, hjust = 0.5),
+    axis.text.y.left   = element_text(size = 12, colour = "black", hjust = 0.5),
     axis.title.y.right = element_text(size = 12, angle = -90, colour = "#7994B2"),
-    axis.text.y.right  = element_text(size = 12, colour = "#7994B2", angle = -90, hjust = 0.5),
+    axis.text.y.right  = element_text(size = 12, colour = "#7994B2", hjust = 0.5),
     axis.ticks.y.right = element_line(colour = "#7994B2"),
     axis.line.y.right  = element_line(colour = "#7994B2"),
     plot.title         = element_text(size = 13)
@@ -369,7 +366,7 @@ ggplot() +
   geom_line(data = deng3_comp, aes(x = x, y = y, color = component), size = 1) + 
   scale_color_manual(values = c("Mixture" = "black", "Gamma" = "purple", "Normal" = "red")) + 
   geom_line(data = deng3_prob, aes(x = x, y = y * ymax), size = 1, linetype = "dashed", color = "#7994B2") + 
-  labs(x = "∆MFI", y = "Density", title = "DENV1") +
+  labs(x = "∆MFI", y = "Density", title = "DENV3") +
   theme_minimal() + 
   scale_y_continuous(
     name = "Density",
@@ -383,9 +380,9 @@ ggplot() +
     axis.ticks         = element_line(colour = "black"),
     axis.text          = element_text(size = 12),
     axis.title.y.left  = element_text(size = 12, angle = 90),
-    axis.text.y.left   = element_text(size = 12, colour = "black", angle = 90, hjust = 0.5),
+    axis.text.y.left   = element_text(size = 12, colour = "black", hjust = 0.5),
     axis.title.y.right = element_text(size = 12, angle = -90, colour = "#7994B2"),
-    axis.text.y.right  = element_text(size = 12, colour = "#7994B2", angle = -90, hjust = 0.5),
+    axis.text.y.right  = element_text(size = 12, colour = "#7994B2", hjust = 0.5),
     axis.ticks.y.right = element_line(colour = "#7994B2"),
     axis.line.y.right  = element_line(colour = "#7994B2"),
     plot.title         = element_text(size = 13)
@@ -399,7 +396,7 @@ ggplot() +
   geom_line(data = deng4_comp, aes(x = x, y = y, color = component), size = 1) + 
   scale_color_manual(values = c("Mixture" = "black", "Gamma" = "purple", "Normal" = "red")) + 
   geom_line(data = deng4_prob, aes(x = x, y = y * ymax), size = 1, linetype = "dashed", color = "#7994B2") + 
-  labs(x = "∆MFI", y = "Density", title = "DENV1") +
+  labs(x = "∆MFI", y = "Density", title = "DENV4") +
   theme_minimal() + 
   scale_y_continuous(
     name = "Density",
@@ -413,9 +410,9 @@ ggplot() +
     axis.ticks         = element_line(colour = "black"),
     axis.text          = element_text(size = 12),
     axis.title.y.left  = element_text(size = 12, angle = 90),
-    axis.text.y.left   = element_text(size = 12, colour = "black", angle = 90, hjust = 0.5),
+    axis.text.y.left   = element_text(size = 12, colour = "black", hjust = 0.5),
     axis.title.y.right = element_text(size = 12, angle = -90, colour = "#7994B2"),
-    axis.text.y.right  = element_text(size = 12, colour = "#7994B2", angle = -90, hjust = 0.5),
+    axis.text.y.right  = element_text(size = 12, colour = "#7994B2", hjust = 0.5),
     axis.ticks.y.right = element_line(colour = "#7994B2"),
     axis.line.y.right  = element_line(colour = "#7994B2"),
     plot.title         = element_text(size = 13)
