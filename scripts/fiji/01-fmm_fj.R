@@ -106,16 +106,28 @@ param = c(a0 = 0, b0=1, a1=2, b1=3, lambda1 = 1)
 # Set the function 
 fitmixture <- function(param, val) {
   
-  # double square brackets retrieves just the number
-  lambda1 = transform.lambda(param[["lambda1"]]) 
+  lambda1 <- transform.lambda(param[["lambda1"]])
   
-  # return the likelihood function 
-  return(
-    - sum(log(
-      lambda1 * dgamma(val, shape = abs(param[["a1"]]), scale = abs(param[["b1"]])) +
-        (1-lambda1) * dnorm(val, mean = abs(param[["a0"]]), sd=abs(param[["b0"]]))
-    ))
-  )
+  # non-boost 
+  a0 <- 0 # mean 
+  b0 <- pmax(param[["b0"]], 1e-5) # sd 
+  
+  # boost 
+  a1 <- pmax(param[["a1"]], 1e-5) # shape (skew)
+  b1 <- pmax(param[["b1"]], 1e-5) # scale (spread)
+  
+  # components 
+  non_boost <- dnorm(val, mean = a0, sd = b0)
+  boost     <- dgamma(pmax(val, 1e-10), shape = a1, scale = b1)
+  
+  # for x > 0: full mixture
+  # for x ≤ 0: only normal component
+  lik <- ifelse(val > 0, ((1 - lambda1) * non_boost) + (lambda1 * boost), (1 - lambda1) * non_boost)
+  
+  # likelihood 
+  epsilon <- 1e-10
+  -sum(log(lik + epsilon))
+  
 }
 
 # store the boost values 
@@ -276,7 +288,8 @@ ggplot() +
     axis.text.y.right  = element_text(colour = "grey40"),
     axis.ticks.y.right = element_line(colour = "grey40"),
     axis.line.y.right  = element_line(colour = "grey40")
-  )
+  ) +
+  theme(panel.grid = element_blank())
 
 ggsave(here("outputs", "denv1_fmm_prob_plot.png"), width = 8, height = 6, dpi = 300)
 
@@ -301,7 +314,8 @@ ggplot() +
     axis.text.y.right  = element_text(colour = "grey40"),
     axis.ticks.y.right = element_line(colour = "grey40"),
     axis.line.y.right  = element_line(colour = "grey40")
-  )
+  ) +
+  theme(panel.grid = element_blank())
 
 ggsave(here("outputs", "denv3_fmm_prob_plot.png"), width = 8, height = 6, dpi = 300)
 
