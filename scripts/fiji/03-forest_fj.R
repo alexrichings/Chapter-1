@@ -131,7 +131,7 @@ var_labels <- c(
 )
 
 # forest plot 
-forest_collapsed <- 
+forest_collapsed_lr_fiji <- 
   ggplot(collapsed_df, aes(x = OR, y = var, colour = sample)) +
   geom_vline(xintercept = 1, linetype = "dashed", colour = "grey40") +
   geom_errorbarh(aes(xmin = LCL, xmax = UCL), position = position_dodge(width = 0.6), height = 0.2) +
@@ -155,8 +155,8 @@ forest_collapsed <-
     panel.grid.major.y = element_blank()
   )
 
-forest_collapsed
-ggsave(here("outputs", "forest_collapsed.png"), width = 8, height = 6, dpi = 300)
+forest_collapsed_lr_fiji
+ggsave(here("outputs", "forest_collapsed_lr_fiji.png"), width = 10, height = 6, dpi = 300)
 
 ---------------------------------------------------------------------------------------
 
