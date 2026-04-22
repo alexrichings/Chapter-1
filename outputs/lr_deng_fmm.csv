@@ -1,14 +1,6 @@
-"","var","level","N_used","counts","OR_CI","p"
-"age_group20–30","age_group","age_group20–30",1019,"6–20=159; 20–30=178; 30–40=152; 40–50=144; 50–60=156; 60–70=122; 70+=108","0.55 (0.24-1.2)",0.139
-"age_group30–40","age_group","age_group30–40",1019,"6–20=159; 20–30=178; 30–40=152; 40–50=144; 50–60=156; 60–70=122; 70+=108","0.4 (0.15-0.97)",0.05
-"age_group40–50","age_group","age_group40–50",1019,"6–20=159; 20–30=178; 30–40=152; 40–50=144; 50–60=156; 60–70=122; 70+=108","0.49 (0.19-1.14)",0.11
-"age_group50–60","age_group","age_group50–60",1019,"6–20=159; 20–30=178; 30–40=152; 40–50=144; 50–60=156; 60–70=122; 70+=108","0.16 (0.04-0.5)",0.005
-"age_group60–70","age_group","age_group60–70",1019,"6–20=159; 20–30=178; 30–40=152; 40–50=144; 50–60=156; 60–70=122; 70+=108","0.36 (0.11-0.93)",0.049
-"age_group70+","age_group","age_group70+",1019,"6–20=159; 20–30=178; 30–40=152; 40–50=144; 50–60=156; 60–70=122; 70+=108","0.67 (0.26-1.56)",0.368
-"age_u20over 20","age_u20","age_u20over 20",1019,"under 20=159; over 20=860","0.43 (0.24-0.79)",0.005
-"gender_cohortMale","gender_cohort","gender_cohortMale",1019,"Female=686; Male=333","1.44 (0.84-2.46)",0.179
-"setting_seroUrban","setting_sero","setting_seroUrban",1019,"Rural=513; Urban=506","1.05 (0.62-1.79)",0.85
-"provinceLa Vega","province","provinceLa Vega",1019,"Espaillat=308; La Vega=21; San Pedro de Macorís=569; Santiago=121","1.6 (0.24-6.1)",0.546
-"provinceSan Pedro de Macorís","province","provinceSan Pedro de Macorís",1019,"Espaillat=308; La Vega=21; San Pedro de Macorís=569; Santiago=121","0.94 (0.53-1.71)",0.825
-"provinceSantiago","province","provinceSantiago",1019,"Espaillat=308; La Vega=21; San Pedro de Macorís=569; Santiago=121","0.66 (0.21-1.67)",0.412
-"regiond","region","regiond",1019,"b=450; d=569","1 (0.59-1.72)",0.988
+"","var","N_used","counts","OR_CI","p"
+"age_u20under 20","age_u20","1019","over 20=860; under 20=159","2.33 (1.26-4.14)","0"
+"genderMale","gender_sero","1007","Female=675; Male=332","1.54 (0.89-2.61)","0.12"
+"setting_seroUrban","setting_sero","1019","Rural=513; Urban=506","1.05 (0.62-1.79)","0.85"
+"education_group2Primary and under","education_group2","911","Beyond primary=495; Primary and under=416","0.99 (0.53-1.82)","0.98"
+"regiond","region","1019","b=450; d=569","1 (0.59-1.72)","0.99"
