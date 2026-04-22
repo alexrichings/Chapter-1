@@ -300,122 +300,126 @@ summary(deng4_prob$y)
 ymax <- 0.125
 
 # deng1 
+x_deng1 <- deng1_prob$x[which.min(abs(deng1_prob$y - 0.5))]
+
 ggplot() +
   geom_histogram(data = inputs, aes(x = change_dengns1_1_scale, y = ..density..), fill = "lightgrey", color = "black", binwidth = 4) + 
   geom_line(data = deng1_comp, aes(x = x, y = y, color = component), size = 1) + 
   scale_color_manual(values = c("Mixture" = "black", "Gamma" = "purple", "Normal" = "red")) + 
   geom_line(data = deng1_prob, aes(x = x, y = y * ymax), size = 1, linetype = "dashed", color = "#7994B2") + 
+  geom_vline(xintercept = x_deng1, linetype = "solid", colour = "red", size = 0.5) +
   labs(x = "∆MFI", y = "Density", title = "DENV1") +
-  theme_minimal() + 
+  theme_minimal(base_size = 16) + 
   scale_y_continuous(
     name = "Density",
     expand = c(0, 0),
-    sec.axis = sec_axis(~ . / ymax, name = "Posterior Probability")) +
+    sec.axis = sec_axis(~ . / ymax, name = "Boosting Probability")) +
   scale_x_continuous(expand = c(0, 0)) +
   coord_cartesian(xlim = c(-15, 55), ylim = c(0, ymax * 1.05)) +
   theme(
+    legend.position    = "none",
     panel.grid         = element_blank(),
     axis.line          = element_line(colour = "black"),
     axis.ticks         = element_line(colour = "black"),
-    axis.text          = element_text(size = 12),
-    axis.title.y.left  = element_text(size = 12, angle = 90),
-    axis.text.y.left   = element_text(size = 12, colour = "black", hjust = 0.5),
-    axis.title.y.right = element_text(size = 12, angle = -90, colour = "#7994B2"),
-    axis.text.y.right  = element_text(size = 12, colour = "#7994B2", hjust = 0.5),
+    axis.title.y.right = element_text(angle = -90, colour = "#7994B2"),
+    axis.text.y.right  = element_text(colour = "#7994B2", hjust = 0.5),
     axis.ticks.y.right = element_line(colour = "#7994B2"),
     axis.line.y.right  = element_line(colour = "#7994B2"),
-    plot.title         = element_text(size = 13)
+    plot.title         = element_text(size = 18)
   )
 
 ggsave(here("outputs", "deng1_fmm_prob_plot.png"), width = 8, height = 6, dpi = 300)
 
 
 # deng2 
+x_deng2 <- deng2_prob$x[which.min(abs(deng2_prob$y - 0.5))]
+
 ggplot() +
   geom_histogram(data = inputs, aes(x = change_dengns1_2_scale, y = ..density..), fill = "lightgrey", color = "black", binwidth = 4) + 
   geom_line(data = deng2_comp, aes(x = x, y = y, color = component), size = 1) + 
   scale_color_manual(values = c("Mixture" = "black", "Gamma" = "purple", "Normal" = "red")) + 
-  geom_line(data = deng1_prob, aes(x = x, y = y * ymax), size = 1, linetype = "dashed", color = "#7994B2") + 
+  geom_line(data = deng2_prob, aes(x = x, y = y * ymax), size = 1, linetype = "dashed", color = "#7994B2") + 
+  geom_vline(xintercept = x_deng2, linetype = "solid", colour = "red", size = 0.5) +
   labs(x = "∆MFI", y = "Density", title = "DENV2") +
-  theme_minimal() + 
+  theme_minimal(base_size = 16) + 
   scale_y_continuous(
     name = "Density",
     expand = c(0, 0),
-    sec.axis = sec_axis(~ . / ymax, name = "Posterior Probability")) +
+    sec.axis = sec_axis(~ . / ymax, name = "Boosting Probability")) +
   scale_x_continuous(expand = c(0, 0)) +
   coord_cartesian(xlim = c(-15, 55), ylim = c(0, ymax * 1.05)) +
   theme(
+    legend.position    = "none",
     panel.grid         = element_blank(),
     axis.line          = element_line(colour = "black"),
     axis.ticks         = element_line(colour = "black"),
-    axis.text          = element_text(size = 12),
-    axis.title.y.left  = element_text(size = 12, angle = 90),
-    axis.text.y.left   = element_text(size = 12, colour = "black", hjust = 0.5),
-    axis.title.y.right = element_text(size = 12, angle = -90, colour = "#7994B2"),
-    axis.text.y.right  = element_text(size = 12, colour = "#7994B2", hjust = 0.5),
+    axis.title.y.right = element_text(angle = -90, colour = "#7994B2"),
+    axis.text.y.right  = element_text(colour = "#7994B2", hjust = 0.5),
     axis.ticks.y.right = element_line(colour = "#7994B2"),
     axis.line.y.right  = element_line(colour = "#7994B2"),
-    plot.title         = element_text(size = 13)
+    plot.title         = element_text(size = 18)
   )
 
 ggsave(here("outputs", "deng2_fmm_prob_plot.png"), width = 8, height = 6, dpi = 300)
 
 # deng3 
+x_deng3 <- deng3_prob$x[which.min(abs(deng3_prob$y - 0.5))]
+
 ggplot() +
   geom_histogram(data = inputs, aes(x = change_dengns1_3_scale, y = ..density..), fill = "lightgrey", color = "black", binwidth = 4) + 
   geom_line(data = deng3_comp, aes(x = x, y = y, color = component), size = 1) + 
   scale_color_manual(values = c("Mixture" = "black", "Gamma" = "purple", "Normal" = "red")) + 
   geom_line(data = deng3_prob, aes(x = x, y = y * ymax), size = 1, linetype = "dashed", color = "#7994B2") + 
+  geom_vline(xintercept = x_deng3, linetype = "solid", colour = "red", size = 0.5) +
   labs(x = "∆MFI", y = "Density", title = "DENV3") +
-  theme_minimal() + 
+  theme_minimal(base_size = 16) + 
   scale_y_continuous(
     name = "Density",
     expand = c(0, 0),
-    sec.axis = sec_axis(~ . / ymax, name = "Posterior Probability")) +
+    sec.axis = sec_axis(~ . / ymax, name = "Boosting Probability")) +
   scale_x_continuous(expand = c(0, 0)) +
   coord_cartesian(xlim = c(-15, 55), ylim = c(0, ymax * 1.05)) +
   theme(
+    legend.position    = "none",
     panel.grid         = element_blank(),
     axis.line          = element_line(colour = "black"),
     axis.ticks         = element_line(colour = "black"),
-    axis.text          = element_text(size = 12),
-    axis.title.y.left  = element_text(size = 12, angle = 90),
-    axis.text.y.left   = element_text(size = 12, colour = "black", hjust = 0.5),
-    axis.title.y.right = element_text(size = 12, angle = -90, colour = "#7994B2"),
-    axis.text.y.right  = element_text(size = 12, colour = "#7994B2", hjust = 0.5),
+    axis.title.y.right = element_text(angle = -90, colour = "#7994B2"),
+    axis.text.y.right  = element_text(colour = "#7994B2", hjust = 0.5),
     axis.ticks.y.right = element_line(colour = "#7994B2"),
     axis.line.y.right  = element_line(colour = "#7994B2"),
-    plot.title         = element_text(size = 13)
+    plot.title         = element_text(size = 18)
   )
 
 ggsave(here("outputs", "deng3_fmm_prob_plot.png"), width = 8, height = 6, dpi = 300)
 
 # deng4 
+x_deng4 <- deng4_prob$x[which.min(abs(deng4_prob$y - 0.5))]
+
 ggplot() +
   geom_histogram(data = inputs, aes(x = change_dengns1_4_scale, y = ..density..), fill = "lightgrey", color = "black", binwidth = 4) + 
   geom_line(data = deng4_comp, aes(x = x, y = y, color = component), size = 1) + 
   scale_color_manual(values = c("Mixture" = "black", "Gamma" = "purple", "Normal" = "red")) + 
   geom_line(data = deng4_prob, aes(x = x, y = y * ymax), size = 1, linetype = "dashed", color = "#7994B2") + 
+  geom_vline(xintercept = x_deng4, linetype = "solid", colour = "red", size = 0.5) +
   labs(x = "∆MFI", y = "Density", title = "DENV4") +
-  theme_minimal() + 
+  theme_minimal(base_size = 16) + 
   scale_y_continuous(
     name = "Density",
     expand = c(0, 0),
-    sec.axis = sec_axis(~ . / ymax, name = "Posterior Probability")) +
+    sec.axis = sec_axis(~ . / ymax, name = "Boosting Probability")) +
   scale_x_continuous(expand = c(0, 0)) +
   coord_cartesian(xlim = c(-15, 55), ylim = c(0, ymax * 1.05)) +
   theme(
+    legend.position    = "none",
     panel.grid         = element_blank(),
     axis.line          = element_line(colour = "black"),
     axis.ticks         = element_line(colour = "black"),
-    axis.text          = element_text(size = 12),
-    axis.title.y.left  = element_text(size = 12, angle = 90),
-    axis.text.y.left   = element_text(size = 12, colour = "black", hjust = 0.5),
-    axis.title.y.right = element_text(size = 12, angle = -90, colour = "#7994B2"),
-    axis.text.y.right  = element_text(size = 12, colour = "#7994B2", hjust = 0.5),
+    axis.title.y.right = element_text(angle = -90, colour = "#7994B2"),
+    axis.text.y.right  = element_text(colour = "#7994B2", hjust = 0.5),
     axis.ticks.y.right = element_line(colour = "#7994B2"),
     axis.line.y.right  = element_line(colour = "#7994B2"),
-    plot.title         = element_text(size = 13)
+    plot.title         = element_text(size = 18)
   )
 
 ggsave(here("outputs", "deng4_fmm_prob_plot.png"), width = 8, height = 6, dpi = 300)
