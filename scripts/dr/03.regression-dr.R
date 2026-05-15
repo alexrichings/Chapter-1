@@ -15,7 +15,10 @@ library("officer")
 library("tidyverse")
 library("officer")
 library("tidyr")
-library("stringr"")
+library("stringr")
+library("mgcv")
+library("mgcViz")
+library("scales")
 
 -------------------------------------------------------------------------------
   
@@ -175,6 +178,24 @@ bat <- table_boost_age %>%
 
 save_as_docx(bat, path = here("outputs", "table_boost_age.docx"))
 
+# plot 
+
+table_boost_age %>%
+  filter(age_group != "Total") %>%
+  mutate(
+    age_group = factor(age_group, levels = unique(age_group)),
+    nums  = str_extract_all(propn, "[0-9]+\\.?[0-9]*"),
+    pct   = as.numeric(map_chr(nums, 1)),
+    lower = as.numeric(map_chr(nums, 2)),
+    upper = as.numeric(map_chr(nums, 3))
+  ) %>%
+  ggplot(aes(x = age_group, y = pct)) +
+  geom_col(fill = "#185FA540", colour = "#185FA5", linewidth = 0.5) +
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.25, colour = "#185FA5") +
+  scale_y_continuous(limits = c(0, 20), labels = function(x) paste0(x, "%")) +
+  labs(x = "Age group", y = "Proportion boosted (%)") +
+  theme_minimal(base_size = 13) +
+  theme(panel.grid.major.x = element_blank())
 
 # c) seroconversion 
 
@@ -277,6 +298,53 @@ table(inputs$province, useNA = "ifany")
 table(inputs$region, useNA = "ifany")
 
 
+# GAMs ----
+
+# initial titre against change 
+
+# initial titre against probability of boosting 
+gam_denv1_start_boost <- getViz(gam(data = inputs, formula = deng1_prob ~ (dengns1_1_mfi_sero), family = betar(link = "logit")))
+gam_denv2_start_boost <- getViz(gam(data = inputs, formula = deng2_prob ~ (dengns1_2_mfi_sero), family = betar(link = "logit")))
+gam_denv3_start_boost <- getViz(gam(data = inputs, formula = deng3_prob ~ s(dengns1_3_mfi_sero), family = betar(link = "logit")))
+gam_denv4_start_boost <- getViz(gam(data = inputs, formula = deng4_prob ~ s(dengns1_4_mfi_sero), family = betar(link = "logit")))
+
+# linear relatinship between initial MFI and probability of boosting 
+plot(gam_denv1_start_boost, allTerms = TRUE, seWithMean = TRUE) + 
+  l_ciPoly(alpha = 0.7, fill = "lightblue") +
+  l_fitLine(linetype = 1) +
+  theme_minimal() +
+  labs(
+    title = "DENV1",
+    x = "Initial MFI",
+    y = "Log odds of mean probability of boosting"
+  )
+
+# initial MFI against boost (binary)
+gam_denv_start_boost <- getViz(gam(data = inputs, formula = deng_boost ~ (dengns1_1_mfi_sero), family = binomial(link = "logit")))
+plot(gam_denv_start_boost, allTerms = TRUE, seWithMean = TRUE) + 
+  l_ciPoly(alpha = 0.7, fill = "lightblue") +
+  l_fitLine(linetype = 1) +
+  theme_minimal() +
+  labs(
+    title = "DENV",
+    x = "Initial MFI",
+    y = "Log odds of boosting"
+  )
+                               
+                               
+                               
+# age against boosting 
+gam_age_boost <- getViz(gam(data = inputs, formula = deng_boost ~ s(age_cohort), family = "binomial"))
+
+plot(gam_age_boost, allTerms = T, seWithMean = T) + 
+  l_ciPoly(alpha=0.7) +
+  l_fitLine(linetype = 1)  +
+  # l_ciBar() +
+  l_rug() +
+  theme_bw() +
+  xlab("Age") +
+  ylab("Log odds of boosting") 
+
 
 -------------------------------------------------------------------------------
 
@@ -372,12 +440,101 @@ write.csv(store.oddsTable, here("outputs", "lr_deng_fmm.csv"))
 lr_deng_fmm <- read.csv(here("outputs", "lr_deng_fmm.csv"))
 
 
+# model 2: use seronegatives 
+
+# defined from the cut offs 
+table(inputs$dengns1_1_seropos_sero, useNA = "ifany") # 53
+table(inputs$dengns1_2_seropos_sero, useNA = "ifany") # 59 
+table(inputs$dengns1_3_seropos_sero, useNA = "ifany") # 39 
+table(inputs$dengns1_4_seropos_sero, useNA = "ifany") # 73 
+
+inputs_seroneg <- inputs %>%
+  dplyr::filter(
+    dengns1_1_seropos_sero == 0 &
+      dengns1_2_seropos_sero == 0 &
+      dengns1_3_seropos_sero == 0 &
+      dengns1_4_seropos_sero == 0
+  )
+
+# 26 seronegative to all serotypes 
+dim(inputs_seroneg)
+
+model2.1 <- glm(deng_boost ~ age_u20, data = inputs_seroneg, family = "binomial")
+model2.2 <- glm(deng_boost ~ gender, data = inputs_seroneg, family = "binomial")
+model2.3 <- glm(deng_boost ~ setting_sero, data = inputs_seroneg, family = "binomial")
+model2.4 <- glm(deng_boost ~ education_group2, data = inputs_seroneg, family = "binomial")
+#model2.5 <- glm(deng_boost ~ province, data = inputs_seroneg, family = "binomial")
+model2.6 <- glm(deng_boost ~ region, data = inputs_seroneg, family = "binomial")
+
+model.list=list(model2.1, model2.2, model2.3, model2.4, model2.6)
+names.model=c("age_u20","gender_sero","setting_sero", "education_group2", "region")
+
+data.tally = inputs[,names.model]
+
+# calculate ORs for the different models 
+store.oddsTable <- NULL
+
+for (jj in seq_along(model.list)) {
+  
+  modelT <- model.list[[jj]]
+  varname <- names.model[jj]
+  
+  mf <- model.frame(modelT)
+  x  <- mf[[2]]
+  
+  tab <- table(x, useNA = "ifany")
+  counts_str <- paste(names(tab), tab, sep="=", collapse="; ")
+  
+  estm <- coef(modelT)
+  conf <- confint(modelT)
+  pval <- coef(summary(modelT))[, 4]
+  
+  # remove intercept
+  estm <- estm[-1]
+  conf <- conf[-1, , drop = FALSE]
+  pval <- pval[-1]
+  
+  # loop through each level
+  for (i in seq_along(estm)) {
+    
+    out_row <- data.frame(
+      var = varname,
+      level = names(estm)[i],
+      N_used = nobs(modelT),
+      counts = counts_str,
+      OR_CI = paste0(
+        round(exp(estm[i]), 2),
+        " (",
+        paste(round(exp(conf[i, ]), 2), collapse = "-"),
+        ")"
+      ),
+      p = round(pval[i], 3),
+      stringsAsFactors = FALSE
+    )
+    
+    store.oddsTable <- rbind(store.oddsTable, out_row)
+  }
+}
+
+store.oddsTable
+
+write.csv(store.oddsTable, here("outputs", "lr_deng_fmm_seroneg.csv"))
+lr_deng_fmm_seroneg <- read.csv(here("outputs", "lr_deng_fmm_seroneg.csv"))
+
+
 -------------------------------------------------------------------------------
   
 # 6. Forest plot ----
 
 # separate CI into separate columns 
 lr_deng_fmm <- lr_deng_fmm %>%
+  mutate(
+    OR  = as.numeric(str_extract(OR_CI, "^[0-9.]+")),
+    LCL = as.numeric(str_extract(OR_CI, "(?<=\\()[0-9.]+")),
+    UCL = as.numeric(str_extract(OR_CI, "[0-9.]+(?=\\))"))
+  )
+
+lr_deng_fmm_seroneg <- lr_deng_fmm_seroneg %>%
   mutate(
     OR  = as.numeric(str_extract(OR_CI, "^[0-9.]+")),
     LCL = as.numeric(str_extract(OR_CI, "(?<=\\()[0-9.]+")),
@@ -425,5 +582,88 @@ forest_collapsed_lr_dr
 ggsave(here("outputs", "forest_collapsed_lr_dr.png"), width = 12, height = 6, dpi = 300)
 
 
+# plot seronegatives and full participants 
+
+# relevel the covariates 
+lr_deng_fmm_seroneg <- lr_deng_fmm_seroneg %>% mutate(outcome = "DENV") %>%
+  mutate(var = fct_relevel(var, "region", "setting_sero", "education_group2", "gender_sero", "age_u20"))
 
 
+
+# join the two models 
+
+lr_deng_fmm <- lr_deng_fmm %>%
+  mutate(sample = "Total",
+         source = "Current",
+         model  = "LR")
+
+lr_deng_fmm_seroneg <- lr_deng_fmm_seroneg %>%
+  mutate(sample = "Seronegative",
+         source = "Current",
+         model  = "LR")
+
+combined_fmm_df <- bind_rows(
+  lr_deng_fmm,
+  lr_deng_fmm_seroneg
+)
+
+var_levels <- combined_fmm_df %>%
+  distinct(var) %>%
+  pull(var) %>%
+  as.character()
+
+combined_fmm_df <- combined_fmm_df %>%
+  mutate(var = factor(var, levels = rev(var_levels))) %>%
+  mutate(OR  = ifelse(var == "education_group2" & sample == "Seronegative", NA, OR),
+         LCL = ifelse(var == "education_group2" & sample == "Seronegative", NA, LCL),
+         UCL = ifelse(var == "education_group2" & sample == "Seronegative", NA, UCL))
+
+pd <- position_dodge(width = 0.75)
+
+forest_fmm_compare <-
+  ggplot(combined_fmm_df,
+         aes(x = OR, y = var,
+             colour = sample,
+             group  = sample)) +
+  geom_vline(xintercept = 1, linetype = "dashed", colour = "grey40") +
+  geom_errorbarh(aes(xmin = LCL, xmax = UCL), position = pd, height = 0.2) +
+  geom_point(position = pd, size = 2.8) +
+  scale_x_log10(
+    breaks = c(0.01, 0.1, 1, 10, 100),
+    labels = c("0.01", "0.1", "1.0", "10.0", "100.0")
+  ) +
+  facet_grid(. ~ outcome) +
+  scale_colour_manual(
+    name   = "Data",
+    values = c("Seronegative" = "#F08080",
+               "Total"        = "#40BDB8"),
+    labels = c("Seronegative" = "Seronegatives",
+               "Total"        = "All participants")
+  ) +
+  scale_y_discrete(labels = c(
+    "age_u20"          = "Age under 20",
+    "gender_sero"      = "Male",
+    "education_group2" = "Primary education or less",
+    "setting_sero"     = "Urban",
+    "region"           = "Southeast region"
+  )) +
+  labs(
+    x = "Odds Ratio (log scale)",
+    y = ""
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    panel.border       = element_rect(fill = NA, linewidth = 0.8, colour = "grey35"),
+    panel.spacing      = unit(1.2, "lines"),
+    strip.background   = element_rect(fill = "grey85", colour = "grey35", linewidth = 0.8),
+    strip.text         = element_text(face = "bold"),
+    strip.placement    = "outside",
+    panel.grid.minor   = element_blank(),
+    panel.grid.major.y = element_blank(),
+    legend.position    = "right"
+  )  +
+  annotate("segment", x = 0, xend = 1000, y = 1.8, yend = 1.8, linetype = "dashed", colour = "grey50", linewidth = 0.8) + 
+  coord_cartesian(xlim = c(0.01, 100)) 
+
+forest_fmm_compare
+ggsave(here("outputs", "forest_fmm_compare.png"), width = 13, height = 7, dpi = 300)
