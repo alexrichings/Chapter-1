@@ -1,0 +1,6 @@
+"","var","level","N_used","counts","OR_CI","p"
+"age_u20under 20","age_u20","age_u20under 20",26,"over 20=3; under 20=23","0.19 (0.01-5.13)",0.247
+"genderMale","gender_sero","genderMale",26,"Female=15; Male=11","3.11 (0.26-72.95)",0.382
+"setting_seroUrban","setting_sero","setting_seroUrban",26,"Rural=16; Urban=10","0.78 (0.03-9.33)",0.846
+"education_group2Primary and under","education_group2","education_group2Primary and under",6,"Beyond primary=4; Primary and under=2","0 (NA-Inf)",0.998
+"regiond","region","regiond",26,"b=8; d=18","0.18 (0.01-2.16)",0.187
