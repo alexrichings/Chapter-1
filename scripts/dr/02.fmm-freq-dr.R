@@ -304,12 +304,13 @@ x_deng1 <- deng1_prob$x[which.min(abs(deng1_prob$y - 0.5))]
 
 ggplot() +
   geom_histogram(data = inputs, aes(x = change_dengns1_1_scale, y = ..density..), fill = "lightgrey", color = "black", binwidth = 4) + 
-  geom_line(data = deng1_comp, aes(x = x, y = y, color = component), size = 1) + 
-  scale_color_manual(values = c("Mixture" = "black", "Gamma" = "purple", "Normal" = "red")) + 
-  geom_line(data = deng1_prob, aes(x = x, y = y * ymax), size = 1, linetype = "dashed", color = "#7994B2") + 
-  geom_vline(xintercept = x_deng1, linetype = "solid", colour = "red", size = 0.5) +
+  geom_line(data = subset(deng1_comp, component == "Normal"), aes(x = x, y = y), color = "red", size = 2) +
+  geom_line(data = subset(deng1_comp, component == "Gamma"), aes(x = x, y = y), color = "purple", size = 2) + 
+  geom_line(data = subset(deng1_comp, component == "Mixture"), aes(x = x, y = y), color = "black", linetype = "dashed", size = 2) +
+  geom_line(data = deng1_prob, aes(x = x, y = y * ymax), size = 2, linetype = "dashed", color = "#7994B2") + 
+  geom_vline(xintercept = x_deng1, linetype = "solid", colour = "black", size = 1) +
   labs(x = "∆MFI", y = "Density", title = "DENV1") +
-  theme_minimal(base_size = 16) + 
+  theme_minimal(base_size = 26) + 
   scale_y_continuous(
     name = "Density",
     expand = c(0, 0),
@@ -325,10 +326,10 @@ ggplot() +
     axis.text.y.right  = element_text(colour = "#7994B2", hjust = 0.5),
     axis.ticks.y.right = element_line(colour = "#7994B2"),
     axis.line.y.right  = element_line(colour = "#7994B2"),
-    plot.title         = element_text(size = 18)
+    plot.title         = element_text(size = 26)
   )
 
-ggsave(here("outputs", "deng1_fmm_prob_plot.png"), width = 8, height = 6, dpi = 300)
+ggsave(here("outputs", "deng1_fmm_prob_plot.png"), width = 10, height = 8, dpi = 300)
 
 
 # deng2 
@@ -337,11 +338,13 @@ x_deng2 <- deng2_prob$x[which.min(abs(deng2_prob$y - 0.5))]
 ggplot() +
   geom_histogram(data = inputs, aes(x = change_dengns1_2_scale, y = ..density..), fill = "lightgrey", color = "black", binwidth = 4) + 
   geom_line(data = deng2_comp, aes(x = x, y = y, color = component), size = 1) + 
-  scale_color_manual(values = c("Mixture" = "black", "Gamma" = "purple", "Normal" = "red")) + 
-  geom_line(data = deng2_prob, aes(x = x, y = y * ymax), size = 1, linetype = "dashed", color = "#7994B2") + 
-  geom_vline(xintercept = x_deng2, linetype = "solid", colour = "red", size = 0.5) +
+  geom_line(data = subset(deng2_comp, component == "Normal"), aes(x = x, y = y), color = "red", size = 2) +
+  geom_line(data = subset(deng2_comp, component == "Gamma"), aes(x = x, y = y), color = "purple", size = 2) + 
+  geom_line(data = subset(deng2_comp, component == "Mixture"), aes(x = x, y = y), color = "black", linetype = "dashed", size = 2) +
+  geom_line(data = deng2_prob, aes(x = x, y = y * ymax), size = 2, linetype = "dashed", color = "#7994B2") + 
+  geom_vline(xintercept = x_deng2, linetype = "solid", colour = "black", size = 1) +
   labs(x = "∆MFI", y = "Density", title = "DENV2") +
-  theme_minimal(base_size = 16) + 
+  theme_minimal(base_size = 26) + 
   scale_y_continuous(
     name = "Density",
     expand = c(0, 0),
@@ -357,10 +360,10 @@ ggplot() +
     axis.text.y.right  = element_text(colour = "#7994B2", hjust = 0.5),
     axis.ticks.y.right = element_line(colour = "#7994B2"),
     axis.line.y.right  = element_line(colour = "#7994B2"),
-    plot.title         = element_text(size = 18)
+    plot.title         = element_text(size = 26)
   )
 
-ggsave(here("outputs", "deng2_fmm_prob_plot.png"), width = 8, height = 6, dpi = 300)
+ggsave(here("outputs", "deng2_fmm_prob_plot.png"), width = 10, height = 8, dpi = 300)
 
 # deng3 
 x_deng3 <- deng3_prob$x[which.min(abs(deng3_prob$y - 0.5))]
@@ -368,11 +371,13 @@ x_deng3 <- deng3_prob$x[which.min(abs(deng3_prob$y - 0.5))]
 ggplot() +
   geom_histogram(data = inputs, aes(x = change_dengns1_3_scale, y = ..density..), fill = "lightgrey", color = "black", binwidth = 4) + 
   geom_line(data = deng3_comp, aes(x = x, y = y, color = component), size = 1) + 
-  scale_color_manual(values = c("Mixture" = "black", "Gamma" = "purple", "Normal" = "red")) + 
-  geom_line(data = deng3_prob, aes(x = x, y = y * ymax), size = 1, linetype = "dashed", color = "#7994B2") + 
-  geom_vline(xintercept = x_deng3, linetype = "solid", colour = "red", size = 0.5) +
+  geom_line(data = subset(deng3_comp, component == "Normal"), aes(x = x, y = y), color = "red", size = 2) +
+  geom_line(data = subset(deng3_comp, component == "Gamma"), aes(x = x, y = y), color = "purple", size = 2) + 
+  geom_line(data = subset(deng3_comp, component == "Mixture"), aes(x = x, y = y), color = "black", linetype = "dashed", size = 2) +
+  geom_line(data = deng3_prob, aes(x = x, y = y * ymax), size = 2, linetype = "dashed", color = "#7994B2") + 
+  geom_vline(xintercept = x_deng3, linetype = "solid", colour = "black", size = 1) +
   labs(x = "∆MFI", y = "Density", title = "DENV3") +
-  theme_minimal(base_size = 16) + 
+  theme_minimal(base_size = 26) + 
   scale_y_continuous(
     name = "Density",
     expand = c(0, 0),
@@ -388,10 +393,10 @@ ggplot() +
     axis.text.y.right  = element_text(colour = "#7994B2", hjust = 0.5),
     axis.ticks.y.right = element_line(colour = "#7994B2"),
     axis.line.y.right  = element_line(colour = "#7994B2"),
-    plot.title         = element_text(size = 18)
+    plot.title         = element_text(size = 26)
   )
 
-ggsave(here("outputs", "deng3_fmm_prob_plot.png"), width = 8, height = 6, dpi = 300)
+ggsave(here("outputs", "deng3_fmm_prob_plot.png"), width = 10, height = 8, dpi = 300)
 
 # deng4 
 x_deng4 <- deng4_prob$x[which.min(abs(deng4_prob$y - 0.5))]
@@ -399,11 +404,13 @@ x_deng4 <- deng4_prob$x[which.min(abs(deng4_prob$y - 0.5))]
 ggplot() +
   geom_histogram(data = inputs, aes(x = change_dengns1_4_scale, y = ..density..), fill = "lightgrey", color = "black", binwidth = 4) + 
   geom_line(data = deng4_comp, aes(x = x, y = y, color = component), size = 1) + 
-  scale_color_manual(values = c("Mixture" = "black", "Gamma" = "purple", "Normal" = "red")) + 
-  geom_line(data = deng4_prob, aes(x = x, y = y * ymax), size = 1, linetype = "dashed", color = "#7994B2") + 
-  geom_vline(xintercept = x_deng4, linetype = "solid", colour = "red", size = 0.5) +
+  geom_line(data = subset(deng4_comp, component == "Normal"), aes(x = x, y = y), color = "red", size = 2) +
+  geom_line(data = subset(deng4_comp, component == "Gamma"), aes(x = x, y = y), color = "purple", size = 2) + 
+  geom_line(data = subset(deng4_comp, component == "Mixture"), aes(x = x, y = y), color = "black", linetype = "dashed", size = 2) +
+  geom_line(data = deng4_prob, aes(x = x, y = y * ymax), size = 2, linetype = "dashed", color = "#7994B2") + 
+  geom_vline(xintercept = x_deng4, linetype = "solid", colour = "black", size = 1) +
   labs(x = "∆MFI", y = "Density", title = "DENV4") +
-  theme_minimal(base_size = 16) + 
+  theme_minimal(base_size = 26) + 
   scale_y_continuous(
     name = "Density",
     expand = c(0, 0),
@@ -419,10 +426,90 @@ ggplot() +
     axis.text.y.right  = element_text(colour = "#7994B2", hjust = 0.5),
     axis.ticks.y.right = element_line(colour = "#7994B2"),
     axis.line.y.right  = element_line(colour = "#7994B2"),
-    plot.title         = element_text(size = 18)
+    plot.title         = element_text(size = 26)
   )
 
-ggsave(here("outputs", "deng4_fmm_prob_plot.png"), width = 8, height = 6, dpi = 300)
+ggsave(here("outputs", "deng4_fmm_prob_plot.png"), width = 10, height = 8, dpi = 300)
+
+
+# facet all the plots 
+
+# make a df of all the component data 
+comp_all <- bind_rows(
+  mutate(deng1_comp, serotype = "DENV1"),
+  mutate(deng2_comp, serotype = "DENV2"),
+  mutate(deng3_comp, serotype = "DENV3"),
+  mutate(deng4_comp, serotype = "DENV4")
+)
+
+# make a df of all the probability data 
+prob_all <- bind_rows(
+  mutate(deng1_prob, serotype = "DENV1"),
+  mutate(deng2_prob, serotype = "DENV2"),
+  mutate(deng3_prob, serotype = "DENV3"),
+  mutate(deng4_prob, serotype = "DENV4")
+)
+
+# join the inputs data into a long form 
+inputs_long <- bind_rows(
+  mutate(inputs, serotype = "DENV1", value = change_dengns1_1_scale),
+  mutate(inputs, serotype = "DENV2", value = change_dengns1_2_scale),
+  mutate(inputs, serotype = "DENV3", value = change_dengns1_3_scale),
+  mutate(inputs, serotype = "DENV4", value = change_dengns1_4_scale)
+)
+
+# add the threshold lines for p > 0.5
+thresholds <- data.frame(
+  serotype = c("DENV1", "DENV2", "DENV3", "DENV4"),
+  x = c(x_deng1, x_deng2, x_deng3, x_deng4)
+)
+
+serotype_map <- c(
+  "DENV1" = "DENV-1",
+  "DENV2" = "DENV-2",
+  "DENV3" = "DENV-3",
+  "DENV4" = "DENV-4"
+)
+
+comp_all$serotype    <- serotype_map[comp_all$serotype]
+prob_all$serotype    <- serotype_map[prob_all$serotype]
+inputs_long$serotype <- serotype_map[inputs_long$serotype]
+thresholds$serotype  <- serotype_map[thresholds$serotype]
+
+
+# set max value 
+ymax <- 0.10
+
+ggplot() +
+  geom_histogram(data = inputs_long, aes(x = value, y = ..density..), fill = "lightgrey", color = "black", binwidth = 4) +
+  geom_line(data = subset(comp_all, component == "Normal"), aes(x = x, y = y), color = "red", size = 2) +
+  geom_line(data = subset(comp_all, component == "Gamma"), aes(x = x, y = y), color = "purple", size = 2) +
+  geom_line(data = subset(comp_all, component == "Mixture"), aes(x = x, y = y), color = "black", linetype = "dashed", size = 2) +
+  geom_line(data = prob_all, aes(x = x, y = y * ymax), color = "#7994B2", linetype = "dashed", size = 2) +
+  geom_vline(data = thresholds, aes(xintercept = x), color = "black", size = 1) +
+  facet_wrap(~ serotype, ncol = 2) +
+  scale_y_continuous(name = "Density", limits = c(0, ymax * 1.05), expand = c(0, 0), sec.axis = sec_axis(~ . / ymax, name = "Boosting Probability")) +
+  scale_x_continuous(expand = c(0, 0)) +
+  coord_cartesian(xlim = c(-15, 55)) +
+  labs(x = "∆MFI", y = "Density") +
+  theme_minimal(base_size = 18) +
+  theme(
+    legend.position = "none",
+    panel.grid = element_blank(),
+    panel.border = element_rect(colour = "black", fill = NA, linewidth = 1),
+    strip.text = element_text(size = 18),
+    strip.background = element_rect(fill = "grey90", colour = "black"),
+    axis.line = element_line(colour = "black"),
+    axis.ticks = element_line(colour = "black"),
+    axis.title.y.right = element_text(angle = -90, colour = "#7994B2"),
+    axis.text.y.right  = element_text(colour = "#7994B2"),
+    axis.ticks.y.right = element_line(colour = "#7994B2"),
+    axis.line.y.right  = element_line(colour = "#7994B2"),
+    plot.title = element_text(size = 18)
+  )
+
+ggsave(here("outputs", "facet_fmm_plot.png"), width = 14, height = 10, dpi = 300)
+
 
 --------------------------------------------------------------------------
 
