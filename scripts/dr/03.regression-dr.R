@@ -201,18 +201,32 @@ table_boost_age %>%
 
 # use the MIA cut-offs from the data 
 
-serotypes_conv <- c("DENV-1", "DENV-2", "DENV-3", "DENV-4")
-sero_vars <- c("dengns1_1", "dengns1_2", "dengns1_3", "dengns1_4")
+serotypes_conv <- c("DENV-1", "DENV-2", "DENV-3", "DENV-4", "DENV")
+sero_vars <- c("dengns1_1", "dengns1_2", "dengns1_3", "dengns1_4", "any")
 
 table_seropos <- map2_dfr(serotypes_conv, sero_vars, function(name, var) {
   
-  year1_var <- paste0(var, "_seropos_sero")
-  year2_var <- paste0(var, "_seropos_cohort")
+  if (var == "any") {
+    
+    year1_vars <- paste0(c("dengns1_1", "dengns1_2", "dengns1_3", "dengns1_4"), "_seropos_sero")
+    year2_vars <- paste0(c("dengns1_1", "dengns1_2", "dengns1_3", "dengns1_4"), "_seropos_cohort")
+   
+     n_total <- sum(!is.na(inputs_complete$deng_boost))
+    
+    # find any seropositive 
+    n_pos1 <- sum(rowSums(inputs_complete[year1_vars] == 1, na.rm = TRUE) > 0)
+    n_pos2 <- sum(rowSums(inputs_complete[year2_vars] == 1, na.rm = TRUE) > 0)
+    
+  } else {
   
-  n_total <- sum(!is.na(inputs_complete[[year1_var]]))
-  
-  n_pos1  <- sum(inputs_complete[[year1_var]] == 1, na.rm = TRUE)
-  n_pos2  <- sum(inputs_complete[[year2_var]] == 1, na.rm = TRUE)
+    year1_var <- paste0(var, "_seropos_sero")
+    year2_var <- paste0(var, "_seropos_cohort")
+    
+    n_total <- sum(!is.na(inputs_complete[[year1_var]]))
+    
+    n_pos1  <- sum(inputs_complete[[year1_var]] == 1, na.rm = TRUE)
+    n_pos2  <- sum(inputs_complete[[year2_var]] == 1, na.rm = TRUE)
+  }
   
   tibble(
     Serotype   = name,
