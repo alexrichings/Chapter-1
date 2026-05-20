@@ -602,10 +602,7 @@ ggsave(here("outputs", "forest_collapsed_lr_dr.png"), width = 12, height = 6, dp
 lr_deng_fmm_seroneg <- lr_deng_fmm_seroneg %>% mutate(outcome = "DENV") %>%
   mutate(var = fct_relevel(var, "region", "setting_sero", "education_group2", "gender_sero", "age_u20"))
 
-
-
 # join the two models 
-
 lr_deng_fmm <- lr_deng_fmm %>%
   mutate(sample = "Total",
          source = "Current",
@@ -619,7 +616,8 @@ lr_deng_fmm_seroneg <- lr_deng_fmm_seroneg %>%
 combined_fmm_df <- bind_rows(
   lr_deng_fmm,
   lr_deng_fmm_seroneg
-)
+) %>%
+  mutate(SE = (log(UCL) - log(LCL)) / (2 * 1.96)) # add the standard error 
 
 var_levels <- combined_fmm_df %>%
   distinct(var) %>%
@@ -631,6 +629,17 @@ combined_fmm_df <- combined_fmm_df %>%
   mutate(OR  = ifelse(var == "education_group2" & sample == "Seronegative", NA, OR),
          LCL = ifelse(var == "education_group2" & sample == "Seronegative", NA, LCL),
          UCL = ifelse(var == "education_group2" & sample == "Seronegative", NA, UCL))
+
+# add the SE ratio to the data 
+se_ratio_df <- combined_fmm_df %>%
+  select(var, sample, SE) %>%
+  pivot_wider(names_from = sample, values_from = SE) %>%
+  mutate(SE_ratio = Total / Seronegative)
+
+combined_fmm_df <- combined_fmm_df %>%
+  left_join(se_ratio_df %>% select(var, SE_ratio), by = "var") %>%
+  mutate(SE_ratio_label = sprintf("%.2f", SE_ratio))
+
 
 pd <- position_dodge(width = 0.75)
 
@@ -665,7 +674,7 @@ forest_fmm_compare <-
     x = "Odds Ratio (log scale)",
     y = ""
   ) +
-  theme_minimal(base_size = 13) +
+  theme_minimal(base_size = 18) +
   theme(
     panel.border       = element_rect(fill = NA, linewidth = 0.8, colour = "grey35"),
     panel.spacing      = unit(1.2, "lines"),
@@ -674,10 +683,63 @@ forest_fmm_compare <-
     strip.placement    = "outside",
     panel.grid.minor   = element_blank(),
     panel.grid.major.y = element_blank(),
-    legend.position    = "right"
+    legend.position    = "bottom", 
+    legend.justification = "centre",
+    legend.background    = element_rect(fill = "white", colour = "grey35", linewidth = 0.5),
   )  +
   annotate("segment", x = 0, xend = 1000, y = 1.8, yend = 1.8, linetype = "dashed", colour = "grey50", linewidth = 0.8) + 
   coord_cartesian(xlim = c(0.01, 100)) 
 
 forest_fmm_compare
-ggsave(here("outputs", "forest_fmm_compare.png"), width = 13, height = 7, dpi = 300)
+
+# convert to a gtable form 
+gt <- ggplotGrob(forest_fmm_compare)
+right_col <- 7
+top_row   <- 10
+bot_row   <- 10
+strip_row <- 8
+
+se_labels <- combined_fmm_df %>%
+  filter(sample == "Total") %>%
+  arrange(match(var, levels(combined_fmm_df$var))) %>%
+  pull(SE_ratio_label) %>%
+  rev()
+
+n_rows <- length(se_labels)
+
+header_grob <- grobTree(
+  rectGrob(gp = gpar(fill = "grey85", col = "grey35", lwd = 0.8 * .pt)),
+  textGrob("SE ratio", gp = gpar(fontface = "bold", fontsize = 18))
+)
+
+row_grobs <- lapply(se_labels, function(lab) {
+  grobTree(
+    rectGrob(gp = gpar(fill = "white", col = "grey35", lwd = 0.8 * .pt)),
+    textGrob(lab, gp = gpar(fontsize = 18), x = 0.5, y = 0.5)
+  )
+})
+
+se_column_grob <- frameGrob(
+  layout = grid.layout(nrow = n_rows, ncol = 1,
+                       heights = unit(rep(1, n_rows), "null"))
+)
+
+for (i in seq_along(row_grobs)) {
+  se_column_grob <- placeGrob(se_column_grob, row_grobs[[i]], row = i, col = 1)
+}
+
+gt      <- gtable_add_cols(gt, unit(2.8, "cm"), pos = right_col)
+new_col <- right_col + 1
+
+gt <- gtable_add_grob(gt, header_grob,
+                      t = strip_row, b = strip_row,
+                      l = new_col,  r = new_col, name = "se_header")
+gt <- gtable_add_grob(gt, se_column_grob,
+                      t = top_row,  b = bot_row,
+                      l = new_col,  r = new_col, name = "se_cells")
+
+# plot
+grid.newpage()
+grid.draw(gt)
+
+ggsave(here("outputs", "forest_fmm_compare.png"), plot = gt, width = 13, height = 7, dpi = 300)
