@@ -49,7 +49,7 @@ add_or_ci <- function(df, outcome, model, sample) {
       model   = model,
       sample  = sample
     )
-}
+  }
 
 # combine all models into a single df 
 all_df <- bind_rows(
@@ -101,62 +101,132 @@ ggsave(here("outputs", "forest_4p.png"), width = 8, height = 6, dpi = 300)
 
 # Forest plot without serotype ---- 
 
-# just plot logistic regression output 
+# collapse the data 
 collapsed_df <- bind_rows(
-  add_or_ci(lr_deng_n97 , outcome="DENV", model="LR", sample="Reduced"),
-  add_or_ci(lr_deng_n260, outcome="DENV", model="LR", sample="Total")
-  # ,
-  # add_or_ci(flr_deng_n97, outcome="DENV", model="FLR", sample="Reduced"),
-  # add_or_ci(flr_deng_n260, outcome="DENV", model="FLR", sample="Total")
+  add_or_ci(lr_deng_n97,  outcome = "DENV", model = "LR", sample = "Reduced"),
+  add_or_ci(lr_deng_n260, outcome = "DENV", model = "LR", sample = "Total")
 ) %>%
-  mutate(var = factor(var, levels = rev(unique(var))))
-
-# add outcome for facet 
-collapsed_df$outcome <- "DENV"
-
-# rename labels 
-var_labels <- c(
-  AGE_U_20 = "Age under 20",
-  SEX = "Male",
-  ETHNIC = "iTaukei ethnicity",
-  I_MOS = "Mosquito exposure",
-  I_TIR = "Used car tires",
-  I_WAT = "Open water container(s)",
-  I_AC = "Air conditioning",
-  I_BLK = "Blocked drains",
-  GEOG = "Urban or peri-urban",
-  FEVER_2YR = "Fever (past 2 years)",
-  DOC_2YR = "Doctor visit (past 2 years)",
-  HH_D = "Cohabitant doctor visit (past 2 years)"
-)
-
-# forest plot 
-forest_collapsed_lr_fiji <- 
-  ggplot(collapsed_df, aes(x = OR, y = var, colour = sample)) +
-  geom_vline(xintercept = 1, linetype = "dashed", colour = "grey40") +
-  geom_errorbarh(aes(xmin = LCL, xmax = UCL), position = position_dodge(width = 0.6), height = 0.2) +
-  geom_point(position = position_dodge(width = 0.6), size = 2.8) +
-  scale_y_discrete(labels = var_labels) + 
-  scale_x_log10() +
-  facet_grid(. ~ outcome) +   
-  labs(
-    x = "Odds Ratio (log scale)",
-    y = "",
-    colour = "Data"
-  ) +
-  theme_minimal(base_size = 13) +
-  theme(
-    panel.border = element_rect(fill = NA, linewidth = 0.8, colour = "grey35"),
-    strip.background = element_rect(fill = "grey90", colour = "grey35", linewidth = 0.8),
-    strip.text = element_text(face = "bold"),
-    strip.placement = "outside",
-    panel.spacing = unit(0, "lines"), 
-    panel.grid.minor = element_blank(),
-    panel.grid.major.y = element_blank()
+  mutate(
+    var    = factor(var, levels = rev(unique(var))),
+    sample = recode(sample,
+                    "Reduced" = "Seronegatives",
+                    "Total"   = "All Participants"),
+    SE     = (log(UCL) - log(LCL)) / (2 * 1.96),
+    outcome = "DENV"
   )
 
-forest_collapsed_lr_fiji
-ggsave(here("outputs", "forest_collapsed_lr_fiji.png"), width = 12, height = 6, dpi = 300)
+# determine SE ratio for each risk factor 
+se_ratio_df <- collapsed_df %>%
+  select(var, sample, SE) %>%
+  pivot_wider(names_from = sample, values_from = SE) %>%
+  mutate(SE_ratio = `All Participants` / Seronegatives)
+
+collapsed_df <- collapsed_df %>%
+  left_join(se_ratio_df %>% select(var, SE_ratio), by = "var") %>%
+  mutate(SE_ratio_label = sprintf("%.2f", SE_ratio))
+
+# edit variable labels 
+var_labels <- c(
+  AGE_U_20  = "Age under 20",
+  SEX       = "Male",
+  ETHNIC    = "iTaukei ethnicity",
+  I_MOS     = "Mosquito exposure",
+  I_TIR     = "Used car tires",
+  I_WAT     = "Open water container(s)",
+  I_AC      = "Air conditioning",
+  I_BLK     = "Blocked drains",
+  GEOG      = "Urban or peri-urban",
+  FEVER_2YR = "Fever (past 2 years)",
+  DOC_2YR   = "Doctor visit (past 2 years)",
+  HH_D      = "Cohabitant doctor visit (past 2 years)"
+)
+
+# plot 
+forest_collapsed_lr_fiji <-
+  ggplot(collapsed_df, aes(x = OR, y = var, colour = sample)) +
+  geom_vline(xintercept = 1, linetype = "dashed", colour = "grey40") +
+  geom_errorbarh(aes(xmin = LCL, xmax = UCL),
+                 position = position_dodge(width = 0.6), height = 0.2) +
+  geom_point(position = position_dodge(width = 0.6), size = 2.8) +
+  scale_y_discrete(labels = var_labels) +
+  scale_x_log10() +
+  facet_grid(. ~ outcome) +
+  labs(x = "Odds Ratio (log scale)", y = "", colour = "Data") +
+  theme_minimal(base_size = 18) +
+  theme(
+    panel.border         = element_rect(fill = NA, linewidth = 0.8, colour = "grey35"),
+    strip.background     = element_rect(fill = "grey90", colour = "grey35", linewidth = 0.8),
+    strip.text           = element_text(face = "bold", size = 18),
+    strip.placement      = "outside",
+    panel.spacing        = unit(0, "lines"),
+    panel.grid.minor     = element_blank(),
+    panel.grid.major.y   = element_blank(),
+    plot.margin          = margin(5, 10, 5, 5, "pt"),
+    legend.position      = "bottom" ,
+    legend.justification = "centre",
+    legend.background    = element_rect(fill = "white", colour = "grey35", linewidth = 0.5),
+    legend.margin        = margin(4, 6, 4, 6)
+  )
+
+# use gtable to add SE to RHS 
+
+# ggplotGrob converts the ggplot into a table of graphical elements 
+# allows you to insepct the positioning within the table 
+
+# set the position of the elements 
+gt        <- ggplotGrob(forest_collapsed_lr_fiji)
+right_col <- 7
+top_row   <- 10
+bot_row   <- 10
+strip_row <- 8
+
+# add labels for the SE values 
+se_labels <- collapsed_df %>%
+  filter(sample == "All Participants") %>%
+  arrange(match(var, levels(collapsed_df$var))) %>%
+  pull(SE_ratio_label) %>%
+  rev()
+
+n_rows <- length(se_labels)
+
+# set the visuals for the top of the table 
+header_grob <- grobTree(
+  rectGrob(gp = gpar(fill = "grey90", col = "grey35", lwd = 0.8 * .pt)),
+  textGrob("SE ratio", gp = gpar(fontface = "bold", fontsize = 18))
+)
+
+# set the visuals for the rest of the rows 
+row_grobs <- lapply(se_labels, function(lab) {
+  grobTree(
+    rectGrob(gp = gpar(fill = "white", col = "grey35", lwd = 0.8 * .pt)),
+    textGrob(lab, gp = gpar(fontsize = 18), x = 0.5, y = 0.5)
+  )
+})
+
+se_column_grob <- frameGrob(
+  layout = grid.layout(nrow = n_rows, ncol = 1,
+                       heights = unit(rep(1, n_rows), "null"))
+)
+
+for (i in seq_along(row_grobs)) {
+  se_column_grob <- placeGrob(se_column_grob, row_grobs[[i]], row = i, col = 1)
+}
+
+# position the new column 
+gt      <- gtable_add_cols(gt, unit(2.8, "cm"), pos = right_col)
+new_col <- right_col + 1
+
+gt <- gtable_add_grob(gt, header_grob,
+                      t = strip_row, b = strip_row,
+                      l = new_col,  r = new_col, name = "se_header")
+gt <- gtable_add_grob(gt, se_column_grob,
+                      t = top_row,  b = bot_row,
+                      l = new_col,  r = new_col, name = "se_cells")
+
+grid.newpage()
+grid.draw(gt)
+
+ggsave(here("outputs", "forest_collapsed_lr_fiji.png"), plot = gt, width = 14, height = 8, dpi = 300)
 
 ---------------------------------------------------------------------------------------
 
