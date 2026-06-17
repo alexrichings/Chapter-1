@@ -197,7 +197,7 @@ table_boost_age %>%
   theme_minimal(base_size = 13) +
   theme(panel.grid.major.x = element_blank())
 
-# c) seroconversion 
+# c) seroconversion ----
 
 # use the MIA cut-offs from the data 
 
@@ -317,7 +317,7 @@ table(inputs$region, useNA = "ifany")
 # initial titre against change 
 
 # initial titre against probability of boosting 
-gam_denv1_start_boost <- getViz(gam(data = inputs, formula = deng1_prob ~ (dengns1_1_mfi_sero), family = betar(link = "logit")))
+gam_denv1_start_boost <- getViz(gam(data = inputs, formula = deng1_prob ~ s(dengns1_1_mfi_sero), family = betar(link = "logit")))
 gam_denv2_start_boost <- getViz(gam(data = inputs, formula = deng2_prob ~ (dengns1_2_mfi_sero), family = betar(link = "logit")))
 gam_denv3_start_boost <- getViz(gam(data = inputs, formula = deng3_prob ~ s(dengns1_3_mfi_sero), family = betar(link = "logit")))
 gam_denv4_start_boost <- getViz(gam(data = inputs, formula = deng4_prob ~ s(dengns1_4_mfi_sero), family = betar(link = "logit")))
@@ -334,7 +334,7 @@ plot(gam_denv1_start_boost, allTerms = TRUE, seWithMean = TRUE) +
   )
 
 # initial MFI against boost (binary)
-gam_denv_start_boost <- getViz(gam(data = inputs, formula = deng_boost ~ (dengns1_1_mfi_sero), family = binomial(link = "logit")))
+gam_denv_start_boost <- getViz(gam(data = inputs, formula = deng_boost ~ s(dengns1_1_mfi_sero), family = binomial(link = "logit")))
 plot(gam_denv_start_boost, allTerms = TRUE, seWithMean = TRUE) + 
   l_ciPoly(alpha = 0.7, fill = "lightblue") +
   l_fitLine(linetype = 1) +
@@ -348,9 +348,10 @@ plot(gam_denv_start_boost, allTerms = TRUE, seWithMean = TRUE) +
                                
                                
 # age against boosting 
-gam_age_boost <- getViz(gam(data = inputs, formula = deng_boost ~ s(age_cohort), family = "binomial"))
+gam_age_boost_viz <- getViz(gam(data = inputs, formula = deng_boost ~ s(age_cohort), family = "binomial"))
+gam_age_boost <- gam(deng_boost ~ s(age_cohort), data = inputs, family = "binomial")
 
-plot(gam_age_boost, allTerms = T, seWithMean = T) + 
+plot(gam_age_boost_viz, allTerms = T, seWithMean = T) + 
   l_ciPoly(alpha=0.7) +
   l_fitLine(linetype = 1)  +
   # l_ciBar() +
@@ -359,12 +360,39 @@ plot(gam_age_boost, allTerms = T, seWithMean = T) +
   xlab("Age") +
   ylab("Log odds of boosting") 
 
+# prediction grid 
+age_grid <- data.frame(age_cohort = seq(min(inputs$age_cohort), max(inputs$age_cohort), length.out = 200))
+
+# predict on response scale 
+pred <- predict(m, newdata = newdat, se.fit = TRUE, type = "response")
+
+plot_dat <- newdat %>%
+  mutate(
+    fit = pred$fit,
+    se = pred$se.fit,
+    upper = fit + 1.96 * se,
+    lower = fit - 1.96 * se)
+
+ggplot(plot_dat, aes(x = age_cohort, y = fit)) +
+  geom_ribbon(aes(ymin = lower, ymax = upper), fill = "#4C78A8", alpha = 0.2) +
+  geom_line(color = "black", size = 1) +
+  geom_rug(data = inputs, aes(x = age_cohort), inherit.aes = FALSE, alpha = 0.15) +
+  theme_minimal(base_size = 18) +
+  labs(
+    x = "Age",
+    y = "Probability of boosting"
+  ) +
+  theme(
+    panel.grid.minor = element_blank()
+  )
+
+ggsave(here("outputs", "age_boost_gam.png"), width = 8, height = 6, dpi = 300)
 
 -------------------------------------------------------------------------------
 
 # 6. Logistic regression ----
 
-# model 1: use all participants 
+# model 1a: use all participants - univariable 
 
 model1.1 <- glm(deng_boost ~ age_u20, data = inputs, family = "binomial")
 model1.2 <- glm(deng_boost ~ gender, data = inputs, family = "binomial")
@@ -380,6 +408,7 @@ data.tally = inputs[,names.model]
 
 # calculate ORs for the different models 
 store.oddsTable = NULL
+
 for (jj in seq_along(model.list)) {
   modelT <- model.list[[jj]]
   
@@ -452,6 +481,182 @@ store.oddsTable
 
 write.csv(store.oddsTable, here("outputs", "lr_deng_fmm.csv"))
 lr_deng_fmm <- read.csv(here("outputs", "lr_deng_fmm.csv"))
+
+
+# model 1b: use all participants - multivariable regression 
+
+model1.1a <- glm(deng_boost ~ age_u20, data = inputs, family = "binomial")
+model1.2a <- glm(deng_boost ~ gender, data = inputs, family = "binomial")
+model1.3a <- glm(deng_boost ~ setting_sero + age_u20 + region, data = inputs, family = "binomial")
+model1.4a <- glm(deng_boost ~ education_group2 + age_u20 + region + gender + setting_sero, data = inputs, family = "binomial")
+#model1.5a <- glm(deng_boost ~ province, data = inputs, family = "binomial")
+model1.6a <- glm(deng_boost ~ region + age_u20, data = inputs, family = "binomial")
+
+
+model.list <- list(model1.1a, model1.2a, model1.3a, model1.4a, model1.6a)
+exposure.vars <- c("age_u20", "gender", "setting_sero", "education_group2", "region")
+
+store.oddsTable <- NULL
+
+for (jj in seq_along(model.list)) {
+  
+  modelT  <- model.list[[jj]]
+  varname <- exposure.vars[jj]
+  
+  estm <- coef(modelT)
+  conf <- confint.default(modelT)
+  pval <- coef(summary(modelT))[, 4]
+  
+  # pull the exposure coefficient only (by name, not position)
+  expo_coef <- estm[grep(varname, names(estm))]
+  expo_conf <- conf[grep(varname, rownames(conf)), , drop = FALSE]
+  expo_pval <- pval[grep(varname, names(pval))]
+  
+  # counts and reference level
+  expo_data  <- model.frame(modelT)[[varname]]
+  ref_level  <- levels(factor(expo_data))[1]
+  test_level <- levels(factor(expo_data))[2]
+  
+  out_row <- data.frame(
+    var       = varname,
+    reference = ref_level,
+    comparison= test_level,
+    N_used    = nobs(modelT),
+    N_ref     = sum(expo_data == ref_level, na.rm = TRUE),
+    N_comp    = sum(expo_data == test_level, na.rm = TRUE),
+    OR_CI     = paste0(round(exp(expo_coef), 2), " (",
+                       round(exp(expo_conf[1]), 2), "-",
+                       round(exp(expo_conf[2]), 2), ")"),
+    p         = round(expo_pval, 3),
+    stringsAsFactors = FALSE,
+    row.names = NULL
+  )
+  
+  store.oddsTable <- rbind(store.oddsTable, out_row)
+}
+
+store.oddsTable
+
+write.csv(store.oddsTable, here("outputs", "mlr_deng_fmm.csv"))
+mlr_deng_fmm <- read.csv(here("outputs", "mlr_deng_fmm.csv"))
+
+# write into tabel format 
+
+lr  <- read.csv(here("outputs", "lr_deng_fmm.csv"))
+mlr <- read.csv(here("outputs", "mlr_deng_fmm.csv"))
+
+table_or <- data.frame(
+  Variable   = c("Age", "Gender", "Setting", "Education", "Region"),
+  Reference  = c("Over 20", "Female", "Rural", "Beyond primary", "B"),
+  Comparison = c("Under 20", "Male", "Urban", "Primary and under", "D"),
+  N_unadj    = lr$N_used,
+  uOR_CI     = lr$OR_CI,
+  u_p        = lr$p,
+  N_adj      = mlr$N_used,
+  aOR_CI     = mlr$OR_CI,
+  a_p        = mlr$p
+)
+
+st <- table_or %>%
+  flextable() %>%
+  set_header_labels(
+    Variable   = "Variable",
+    Reference  = "Reference",
+    Comparison = "Comparison",
+    N_unadj    = "N (unadjusted)",
+    uOR_CI     = "uOR (95% CI)",
+    u_p        = "p",
+    N_adj      = "N (adjusted)",
+    aOR_CI     = "aOR (95% CI)",
+    a_p        = "p"
+  ) %>%
+  bold(part = "header") %>%
+  fontsize(size = 9, part = "all") %>%
+  autofit()
+
+st
+
+save_as_docx(st, path = here("outputs", "lr_comparison_OR.docx"))
+
+
+----
+  
+  table_or <- data.frame(
+    Variable = c(
+      "Age / years", "  Over 20 (ref)", "  Under 20",
+      "Gender", "  Female (ref)", "  Male",
+      "Setting", "  Rural (ref)", "  Urban",
+      "Education", "  Beyond primary (ref)", "  Primary or less",
+      "Region", "  Southwest (ref)", "  Northeast"
+    ),
+    N_unadj = c(
+      "", "", "1,019",
+      "", "", "1,007",
+      "", "", "1,019",
+      "", "", "911",
+      "", "", "1,019"
+    ),
+    uOR_CI = c(
+      "", "", "2.33 (1.26-4.14)",
+      "", "", "1.54 (0.89-2.61)",
+      "", "", "1.05 (0.62-1.79)",
+      "", "", "0.99 (0.53-1.82)",
+      "", "", "1.00 (0.59-1.72)"
+    ),
+    u_p = c(
+      "", "", "0.001",
+      "", "", "0.120",
+      "", "", "0.850",
+      "", "", "0.980",
+      "", "", "0.990"
+    ),
+    N_adj = c(
+      "", "", "1,019",
+      "", "", "1,007",
+      "", "", "1,019",
+      "", "", "900",
+      "", "", "1,019"
+    ),
+    aOR_CI = c(
+      "", "", "2.33 (1.29-4.21)",
+      "", "", "1.54 (0.90-2.62)",
+      "", "", "1.05 (0.62-1.78)",
+      "", "", "0.92 (0.49-1.72)",
+      "", "", "0.87 (0.51-1.50)"
+    ),
+    a_p = c(
+      "", "", "0.005",
+      "", "", "0.116",
+      "", "", "0.859",
+      "", "", "0.798",
+      "", "", "0.623"
+    )
+  )
+
+# rows that are variable-level headers (bold)
+header_rows <- c(1, 4, 7, 10, 13)
+
+st <- table_or %>%
+  flextable() %>%
+  set_header_labels(
+    Variable = "Variable",
+    N_unadj  = "N (unadjusted)",
+    uOR_CI   = "uOR (95% CI)",
+    u_p      = "p-value",
+    N_adj    = "N (adjusted)",
+    aOR_CI   = "aOR (95% CI)",
+    a_p      = "p"
+  ) %>%
+  bold(part = "header") %>%
+  bold(i = header_rows, j = "Variable", part = "body") %>%
+  fontsize(size = 9, part = "all") %>%
+  autofit()
+
+st
+
+save_as_docx(st, path = here("outputs", "lr_comparison_OR.docx"))
+
+
 
 
 # model 2: use seronegatives 
