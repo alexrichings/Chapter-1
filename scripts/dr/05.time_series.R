@@ -87,6 +87,39 @@ daily_cases_18_23 <- df_18_23 %>%
     fill = list(cases = 0)
   )
 
+# align cases by month + province 
+
+df_13_17 <- df_13_17 %>%
+  mutate(date = dmy(`Fecha inicio síntomas`),
+         month_date = floor_date(date, "month"))
+
+df_18_23 <- df_18_23 %>%
+  mutate(date = as.Date(`Fecha inicio síntomas`),
+         month_date = floor_date(date, "month"))
+
+# 2013 - 2017 
+monthly_cases_13_17 <- df_13_17 %>%
+  filter(!is.na(month_date)) %>%
+  count(month_date, Provincia, name = "cases") %>%
+  group_by(Provincia) %>%
+  complete(
+    month_date = seq(min(month_date), max(month_date), by = "month"),
+    fill = list(cases = 0)
+  ) %>%
+  ungroup()
+
+# 2018 - 2023 
+monthly_cases_18_23 <- df_18_23 %>%
+  filter(!is.na(month_date)) %>%
+  count(month_date, Provincia, name = "cases") %>%
+  group_by(Provincia) %>%
+  complete(
+    month_date = seq(min(month_date), max(month_date), by = "month"),
+    fill = list(cases = 0)
+  ) %>%
+  ungroup()
+
+
 
 # join the two data sets 
 
@@ -104,6 +137,17 @@ daily_cases_combined <- bind_rows(df_pre_cutoff, df_post_cutoff) %>%
   )
 
 saveRDS(daily_cases_combined, here("data", "daily_cases_combined.rds"))
+
+# join monthly data 
+monthly_cases_prov <- bind_rows(
+  monthly_cases_13_17,
+  monthly_cases_18_23
+) %>%
+  arrange(month_date, Provincia)
+
+saveRDS(monthly_cases_prov, here("data", "monthly_cases_prov.rds"))
+
+
 ------------------------------------------------------------
   
 # 4. Plot ----
@@ -113,26 +157,26 @@ ggplot(daily_cases_combined, aes(x = date, y = cases)) +
   geom_line(colour = "#2E86C1", linewidth = 0.1, alpha = 0.7) +
   labs(
     x = "Date of symptom onset",
-    y = "Cases"
+    y = "Daily Dengue Cases"
   ) +
   scale_x_date(
     limits = as.Date(c("2013-01-01", "2023-12-31")),
     breaks = seq(as.Date("2013-01-01"), as.Date("2023-12-31"), by = "year"),
     date_labels = "%Y"
   ) +
-  theme_minimal(base_size = 16) +
+  theme_minimal(base_size = 18) +
   theme(
     panel.grid = element_blank(),
     axis.line = element_line(colour = "black"),
     axis.ticks = element_line(colour = "black"),
     axis.ticks.length = unit(0.2, "cm"),
-    axis.text = element_text(size = 16),
-    axis.title = element_text(size = 16),
-    plot.title = element_text(size = 16, face = "bold"),
-    axis.text.x = element_text(angle = 45, hjust = 1)
+    axis.text = element_text(size = 18),
+    axis.title = element_text(size = 18),
+    plot.title = element_text(size = 18, face = "bold"),
+    axis.text.x = element_text(angle = 0, hjust = 0.5)
   )
 
-ggsave(here("outputs", "dengue_dr_case_series2.png"), width = 10, height = 6, dpi = 300)
+ggsave(here("outputs", "dengue_dr_case_series2.png"), width = 12, height = 6, dpi = 300)
 
 
 

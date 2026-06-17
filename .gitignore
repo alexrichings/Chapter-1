@@ -56,3 +56,6 @@ data/
 
 # attic 
 attic/
+
+# ignore time_series 
+scripts/dr/05.time_series.R
