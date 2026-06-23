@@ -222,7 +222,7 @@ denv3_comp <- comp_builder(opt$deng3$par, mixture_denv3)
 # Plot 
 # denv1
 ggplot() +
-  geom_histogram(data = inputs, aes(x = change_denv1_scaled, y = ..density..), fill = "lightgrey", color = "black", binwidth = 2) + 
+  geom_histogram(data = inputs, aes(x = change_denv1_scaled, y = ..density..), fill = "#E4E4E4", color = "black", binwidth = 2) + 
   geom_line(data = denv1_comp, aes(x = x, y = y, color = component), linewidth = 1) + 
   scale_color_manual(values = c("Mixture" = "black", "Gamma" = "purple", "Normal" = "red")) +
   labs(
@@ -233,9 +233,12 @@ ggplot() +
   theme_minimal() + 
   coord_cartesian(xlim = c(-5, 20), ylim = c(0,0.3))
 
+ggsave(here("outputs", "deng1_fmm_plot_fiji.png"), width = 10, height = 8, dpi = 300)
+
+
 # denv3
 ggplot() +
-  geom_histogram(data = inputs, aes(x = change_denv3_scaled, y = ..density..), fill = "lightgrey", color = "black", binwidth = 2) + 
+  geom_histogram(data = inputs, aes(x = change_denv3_scaled, y = ..density..), fill = "#E4E4E4", color = "black", binwidth = 2) + 
   geom_line(data = denv3_comp, aes(x = x, y = y, color = component), linewidth = 1) + 
   scale_color_manual(values = c("Mixture" = "black", "Gamma" = "purple", "Normal" = "red")) +
   labs(
@@ -245,6 +248,31 @@ ggplot() +
   ) +
   theme_minimal() + 
   coord_cartesian(xlim = c(-5, 20), ylim = c(0,0.3))
+
+
+# FMM schematic from Fiji data ----
+denv1_comp$component <- factor(denv1_comp$component, 
+                               levels = c("Gamma", "Normal", "Mixture"))
+ggplot() +
+  geom_line(data = denv1_comp, aes(x = x, y = y, color = component), linewidth = 3.5) + 
+  scale_color_manual(values = c("Mixture" = "black", "Gamma" = "purple", "Normal" = "red")) +
+  labs(
+    x = "∆MFI",
+    y = "Density",
+  ) +
+  theme_minimal(base_size = 34) + 
+  theme(
+    panel.grid = element_blank(),
+    axis.line = element_line(color = "black", linewidth = 2.5),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    legend.position = "none"
+  ) + 
+  coord_cartesian(xlim = c(-5, 20), ylim = c(0,0.18)) + 
+  
+
+ggsave(here("outputs", "fmm_schematic.png"), width = 12, height = 8, dpi = 300)
+
 
 ----------------------------------------------------------------------------------------
   
@@ -334,4 +362,5 @@ inputs <- inputs %>%
 inputs_fj <- inputs %>% select(-boost.x, -boost.y)
 
 saveRDS(inputs_fj, here("data", "inputs_fj.rds"))
+
 
