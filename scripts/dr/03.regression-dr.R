@@ -762,7 +762,7 @@ lr_deng_fmm_seroneg <- lr_deng_fmm_seroneg %>%
 
 # label variables 
 dr_vars <- c(
-  "age_u20"          = "Age under 20",
+  "age_u20"          = "Age under 20*",
   "gender_sero"      = "Male",
   "setting_sero"     = "Urban",
   "education_group2" = "Primary education or less",
@@ -869,7 +869,7 @@ forest_fmm_compare <-
                "Total"        = "All participants")
   ) +
   scale_y_discrete(labels = c(
-    "age_u20"          = "Age under 20",
+    "age_u20"          = "Age under 20*",
     "gender_sero"      = "Male",
     "education_group2" = "Primary education or less",
     "setting_sero"     = "Urban",
