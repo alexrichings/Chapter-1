@@ -13,6 +13,8 @@ library(stringr)
 library(here)
 library(readr)
 library(colorspace)
+library(grid)
+library(gtable)
 
 ------------------------------------------------------------------------
   
@@ -128,16 +130,16 @@ collapsed_df <- collapsed_df %>%
 # edit variable labels 
 var_labels <- c(
   AGE_U_20  = "Age under 20",
-  SEX       = "Male",
+  SEX       = "Male*",
   ETHNIC    = "iTaukei ethnicity",
   I_MOS     = "Mosquito exposure",
   I_TIR     = "Used car tires",
   I_WAT     = "Open water container(s)",
   I_AC      = "Air conditioning",
   I_BLK     = "Blocked drains",
-  GEOG      = "Urban or peri-urban",
+  GEOG      = "Urban or peri-urban*",
   FEVER_2YR = "Fever (past 2 years)",
-  DOC_2YR   = "Doctor visit (past 2 years)",
+  DOC_2YR   = "Doctor visit (past 2 years)*",
   HH_D      = "Cohabitant doctor visit (past 2 years)"
 )
 
