@@ -195,8 +195,8 @@ denv_comp <- comp_builder(opt$par, mixture_denv)
 
 # Components in the simulated mixture model 
 ggplot() +
-  geom_histogram(data = dat, aes(x = mia, y = ..density..), 
-                 binwidth = 0.25, fill = "lightgrey", color = "black") + 
+  geom_density(data = dat, aes(x = mia), stat = "density", alpha = 0.7, fill = "#EDEDED", linewidth = 1) + 
+  #geom_histogram(data = dat, aes(x = mia, y = ..density..), binwidth = 0.25, fill = "lightgrey", color = "black") + 
   geom_line(data = denv_comp, aes(x = x, y = y, color = component), size = 1) + 
   scale_color_manual(values = c("Mixture" = "black", "Gamma" = "purple", "Normal" = "red")) +
   labs(
