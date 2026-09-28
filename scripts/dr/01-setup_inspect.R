@@ -17,20 +17,8 @@
 
 library("readxl")
 library("here")
-
-
 library("ggplot2")
-library("summarytools")
 library("dplyr")
-library("lme4")
-library("gtsummary")
-library("serofoi")
-library("janitor")
-library("tidyr")
-]
-library(plotly)
-library(viridisLite)
-
 
 -------------------------------------------------------------------------------
 
