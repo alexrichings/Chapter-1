@@ -6,11 +6,12 @@
 # Script: 03-boost-regression ----  
 
 # Purpose: 
-# Tabulate exposures (including by different covariates), tabulate boosts
+# Tabulate exposures (including by different covariates), tabulate boosts, 
+# tabulate exposures, run regression 
 
 # Output: 
 # Individual probability of boosting for each person per dengue serotype (inputs_dr) and
-# fmm parameters 
+# fmm parameters, regression tables 
 
 -------------------------------------------------------------------------------
 
