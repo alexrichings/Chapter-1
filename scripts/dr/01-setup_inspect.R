@@ -6,8 +6,10 @@
 # Script: 01-setup_inspect ----  
 
 # Purpose: 
-# Import raw serological data, clean variables, visual inspection of data,
-# output paired data RDS file 
+# Import raw serological data, clean variables, visual inspection of data
+
+# Output: 
+# Paired serological data file: df_wide 
 
 --------------------------------------------------------------------------------
 
