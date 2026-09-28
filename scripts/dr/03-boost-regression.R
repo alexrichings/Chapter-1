@@ -1,10 +1,20 @@
 
-# 03.regression 
-
-# regression analyses using outputs from FMMs 
+# Chapter 1 
 
 -------------------------------------------------------------------------------
   
+# Script: 03-boost-regression ----  
+
+# Purpose: 
+# Tabulate exposures (including by different covariates), tabulate boosts
+
+# Output: 
+# Individual probability of boosting for each person per dengue serotype (inputs_dr) and
+# fmm parameters 
+
+-------------------------------------------------------------------------------
+
+
 # 1. Install and load packages ----
 
 library("ggplot2")
