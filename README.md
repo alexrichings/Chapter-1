@@ -10,6 +10,8 @@ This study investigates the use of boosts in antibody levels as a metric of expo
 
 # Repository Structure 
 
+[ insert tree ]
+
 ----------------------------------------------------------------------------------------------------------------
 
 # Script Overview 
