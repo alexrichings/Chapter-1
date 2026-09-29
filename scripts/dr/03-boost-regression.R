@@ -633,7 +633,7 @@ combined_fmm_df <- combined_fmm_df %>%
   mutate(SE_ratio_label = sprintf("%.2f", SE_ratio))
 
 
-# Produce forest plot 
+# Produce forest plot with all participants, seronegatives and SE ratios 
 
 pd <- position_dodge(width = 0.75)
 
@@ -679,18 +679,27 @@ forest_fmm_compare <-
 
 forest_fmm_compare
 
-# convert to a gtable form 
+
+# Convert to gtable form 
+
+
 gt <- ggplotGrob(forest_fmm_compare)
+
+# Set dimensions 
 right_col <- 7
 top_row   <- 10
 bot_row   <- 10
 strip_row <- 8
 
+# Add labels 
 se_labels <- combined_fmm_df %>%
   filter(sample == "Total") %>%
   arrange(match(var, levels(combined_fmm_df$var))) %>%
   pull(SE_ratio_label) %>%
   rev()
+
+
+###### progress
 
 n_rows <- length(se_labels)
 
