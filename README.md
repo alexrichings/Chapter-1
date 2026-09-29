@@ -47,8 +47,8 @@ This study investigates the use of boosts in antibody levels as a metric of expo
 
 ### 03-boost-regression
 *Purpose:* 
-  - Recategorise data by: a) boost status and age
-  - Tabulate exposures by boost status, age and seroconversion status
+  - Recategorise data by: a) boost status and b) age
+  - Tabulate exposures by a) boost status, b) age and c) seroconversion status
   - Logistic regression on risk factors for exposure 
 
 *Output:*
