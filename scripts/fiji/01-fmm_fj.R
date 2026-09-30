@@ -38,13 +38,14 @@ inputs$change_denv3_scaled[inputs$change_denv3_scaled <= -5] <- NA
   
 # Density 
 # denv3 
-ggplot(data = inputs, aes(x = change_denv3_scaled)) + 
+ggplot(data = inputs, aes(x = change_denv3_scaled), linewidth = 2) + 
 geom_density(stat = "density", alpha = 0.7, fill = "grey") + 
 labs(x = "∆MFI", 
      y = "Density",
      title = "Change in DENV3 titre (2013 - 2015)") + 
 theme_minimal() + 
-coord_cartesian(xlim = c(-5, 20), ylim = c(0,0.4))
+coord_cartesian(xlim = c(-5, 20), ylim = c(0,0.4)) + 
+  theme(panel.grid = element_blank())
 
 ggsave(here("outputs", "denv3_density_plot.png"), width = 8, height = 6, dpi = 300)
 
@@ -251,8 +252,8 @@ ggplot() +
 
 
 # FMM schematic from Fiji data ----
-denv1_comp$component <- factor(denv1_comp$component, 
-                               levels = c("Gamma", "Normal", "Mixture"))
+denv1_comp$component <- factor(denv1_comp$component, levels = c("Gamma", "Normal", "Mixture"))
+
 ggplot() +
   geom_line(data = denv1_comp, aes(x = x, y = y, color = component), linewidth = 3.5) + 
   scale_color_manual(values = c("Mixture" = "black", "Gamma" = "purple", "Normal" = "red")) +
@@ -268,10 +269,49 @@ ggplot() +
     axis.ticks = element_blank(),
     legend.position = "none"
   ) + 
-  coord_cartesian(xlim = c(-5, 20), ylim = c(0,0.18)) + 
+  coord_cartesian(xlim = c(-5, 20), ylim = c(0,0.18)) 
   
 
 ggsave(here("outputs", "fmm_schematic.png"), width = 12, height = 8, dpi = 300)
+
+
+# add the raw data underneath 
+
+ggplot() +
+  geom_density(data = inputs, aes(x = change_denv1_scaled), stat = "density", colour = "black", linewidth = 1) + 
+  labs(
+    x = "Change in antibody level (∆MFI)",
+    y = "Density",
+  ) +
+  theme_minimal(base_size = 22) + 
+  theme(
+    panel.grid = element_blank(),
+    axis.line = element_line(color = "black", linewidth = 2),
+    axis.text.y = element_blank()
+  ) + 
+  coord_cartesian(xlim = c(-5, 20), ylim = c(0,0.18)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", colour = "black", linewidth = 0.8)
+
+# plot components 
+ggplot() +
+  geom_density(data = inputs, aes(x = change_denv1_scaled), stat = "density", colour = "grey90", linewidth = 1) + 
+  geom_line(data = subset(denv1_comp, component == "Gamma" & x >= 0), aes(x = x, y = y, color = component), linewidth = 1) + 
+  geom_line(data = subset(denv1_comp, component == "Normal"), aes(x = x, y = y, color = component), linewidth = 1) + 
+  geom_line(data = subset(denv1_comp, component == "Mixture"), aes(x = x, y = y, color = component), linewidth = 1) + 
+  scale_color_manual(values = c("Mixture" = "black", "Gamma" = "purple", "Normal" = "red")) +
+  labs(
+    x = "Change in antibody level (∆MFI)",
+    y = "Density",
+  ) +
+  theme_minimal(base_size = 22) + 
+  theme(
+    panel.grid = element_blank(),
+    axis.line = element_line(color = "black", linewidth = 2),
+    axis.text.y = element_blank(),
+    legend.position = "none",
+  ) + 
+  coord_cartesian(xlim = c(-5, 20), ylim = c(0,0.18)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", colour = "black", linewidth = 0.8)
 
 
 ----------------------------------------------------------------------------------------
