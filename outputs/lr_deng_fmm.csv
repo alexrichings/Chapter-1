@@ -1,6 +1,6 @@
-"","var","N_used","counts","OR_CI","p"
-"age_u20under 20","age_u20","1019","over 20=860; under 20=159","2.33 (1.26-4.14)","0"
-"genderMale","gender_sero","1007","Female=675; Male=332","1.54 (0.89-2.61)","0.12"
-"setting_seroUrban","setting_sero","1019","Rural=513; Urban=506","1.05 (0.62-1.79)","0.85"
-"education_group2Primary and under","education_group2","911","Beyond primary=495; Primary and under=416","0.99 (0.53-1.82)","0.98"
-"regiond","region","1019","b=450; d=569","1 (0.59-1.72)","0.99"
+"var","level","N_used","counts","OR_CI","p"
+"age_u20","age_u20under 20",1019,"over 20=860; under 20=159","2.33 (1.26-4.14)",0.005
+"gender_sero","genderMale",1007,"Female=675; Male=332","1.54 (0.89-2.61)",0.116
+"setting_sero","setting_seroUrban",1019,"Rural=513; Urban=506","1.05 (0.62-1.79)",0.85
+"education_group2","education_group2Primary and under",911,"Beyond primary=495; Primary and under=416","0.99 (0.53-1.82)",0.977
+"region","regiond",1019,"b=450; d=569","1 (0.59-1.72)",0.988
