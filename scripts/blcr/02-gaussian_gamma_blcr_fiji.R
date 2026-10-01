@@ -173,7 +173,7 @@ cols  <- c("Marginal mixture" = "#1a1a1a",
            "Booster"          = "#EE6677")
 fills <- c("Non-booster" = "#4477AA", "Booster" = "#EE6677")
 
-ggplot() +
+bfmm_fiji <- ggplot() +
   geom_histogram(
     data = fiji_inputs,
     aes(x = change_denv1_scaled, y = after_stat(density)),
@@ -209,3 +209,9 @@ ggplot() +
   theme_minimal(base_size = 12) +
   theme(legend.position = "top", panel.grid.minor = element_blank(),
         panel.grid.major = element_line(colour = "grey93", linewidth = 0.3))
+
+# Save plot
+ggsave(here("outputs/figures/", "bfmm_fiji.png"), plot = bfmm_fiji, width = 13, height = 7, dpi = 300)
+
+
+
