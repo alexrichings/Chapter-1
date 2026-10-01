@@ -29,7 +29,7 @@ transformed parameters {
 model {
   mu1             ~ normal(0, 1);
   sigma1          ~ normal(0, 1);
-  alpha     ~ gamma(2, 0.4);   // prior mean shape ≈ 5
+  alpha ~ gamma(4, 2);   // concentrates mass above 1, mean = 2
   beta_rate ~ gamma(2, 9.0);   // prior mean rate ≈ 0.22 → Gamma mean ≈ 5/0.22 ≈ 22.5
   theta_intercept ~ normal(0, 1.5);  // weakly informative on booster proportion
   theta_beta      ~ normal(0, 1);    // one prior applies to all covariate coefficients
