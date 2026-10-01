@@ -239,12 +239,4 @@ ggplot() +
   )
 
 
-ggplot() +
-  geom_histogram(
-    data = inputs_fj,
-    aes(x = change_denv1_scaled, y = after_stat(density)),
-    bins      = 20,
-    fill      = "grey88",
-    colour    = "white",
-    linewidth = 0.2) + 
-  theme_minimal()
+
