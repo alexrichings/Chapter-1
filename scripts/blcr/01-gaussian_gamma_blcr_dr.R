@@ -24,13 +24,20 @@ library(ggplot2)
   
 # 2. Load data ---- 
 
+# load in the whole DR data set 
 inputs <- readRDS(here("data", "inputs_dr.rds"))
 
+# filter the data to run on specific regions
+esp <- inputs %>% filter(province == "Espaillat")
+spm <- inputs %>% filter(province == "San Pedro de Macorís")
+
+inputs <- esp
 
 # Scale data for stability 
 inputs <- inputs %>%
   mutate(
-    baseline_scaled = as.numeric(scale(dengns1_1_mfi_sero / 1000))
+    baseline_scaled = as.numeric((dengns1_1_mfi_sero / 1000)),
+    change_dengns1_1_scale = as.numeric((change_dengns1_1/1000))
   ) %>%
   filter(!is.na(change_dengns1_1_scale), !is.na(dengns1_1_mfi_sero))
 
@@ -223,7 +230,7 @@ ggplot() +
   scale_fill_manual(values   = fills,                              name = NULL) +
   coord_cartesian(xlim = c(-15, 30)) +
   labs(
-    title    = "Gaussian-Gamma mixture model: dengue NS1 ΔMFI",
+    title    = "Gaussian-Gamma mixture model: DENV1 ΔMFI",
     subtitle = sprintf(
       "Estimated booster proportion: %.1f%% (95%% CrI: %.1f%%–%.1f%%)",
       pb_med, pb_lo, pb_hi),
@@ -237,6 +244,23 @@ ggplot() +
     panel.grid.minor = element_blank(),
     panel.grid.major = element_line(colour = "grey93", linewidth = 0.3)
   )
+
+ggsave(here("outputs/figures/", "blcr-fmm-esp-denv1.png"), width = 10, height = 8, dpi = 300)
+
+
+--------------------------------------------------------------------------------
+
+# 13. ORs from latent class regression ----
+
+fit_denv1$draws("theta_beta", format = "df") |>
+pivot_longer(starts_with("theta_beta"), names_to = "param", values_to = "value") |>
+group_by(param) |>
+summarise(
+  OR_med = exp(median(value)),
+  OR_lo  = exp(quantile(value, 0.025)),
+  OR_hi  = exp(quantile(value, 0.975))
+)
+
 
 
 
