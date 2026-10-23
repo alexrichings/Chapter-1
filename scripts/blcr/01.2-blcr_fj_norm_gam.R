@@ -258,10 +258,14 @@ mod <- cmdstan_model(here("scripts", "blcr", "01-blcr_norm_gam.stan"))
 
 # create a list of serotypes with the relevant data 
 serotypes <- list(
-  list(name = "DENV1", delta_col = "change_denv1_scaled", baseline_col = "baseline_denv1_scaled"),
-  list(name = "DENV2", delta_col = "change_denv2_scaled", baseline_col = "baseline_denv2_scaled"),
-  list(name = "DENV3", delta_col = "change_denv3_scaled", baseline_col = "baseline_denv3_scaled"),
-  list(name = "DENV4", delta_col = "change_denv4_scaled", baseline_col = "baseline_denv4_scaled")
+  list(name = "DENV1", delta_col = "change_denv1_scaled", baseline_col = "baseline_denv1_scaled",
+       mfi_col = "DENV1", followup_col = "DENV1B", p_booster_col = "p_booster_denv1"),
+  list(name = "DENV2", delta_col = "change_denv2_scaled", baseline_col = "baseline_denv2_scaled",
+       mfi_col = "DENV2", followup_col = "DENV2B", p_booster_col = "p_booster_denv2"),
+  list(name = "DENV3", delta_col = "change_denv3_scaled", baseline_col = "baseline_denv3_scaled",
+       mfi_col = "DENV3", followup_col = "DENV3B", p_booster_col = "p_booster_denv3"),
+  list(name = "DENV4", delta_col = "change_denv4_scaled", baseline_col = "baseline_denv4_scaled",
+       mfi_col = "DENV4", followup_col = "DENV4B", p_booster_col = "p_booster_denv4")
 )
 
 # create lists for each output
@@ -440,7 +444,7 @@ print(prop_booster_summary)
 
 # Plot the antibody boost summary per serotype 
 prop_booster_plot <- ggplot(prop_booster_summary, aes(x = serotype, y = median)) +
-  geom_col(fill = "#4477AA", alpha = 0.8, width = 0.5) +
+  geom_col(fill = "#2c7bb6", alpha = 0.5, colour = "black", width = 0.5) +
   geom_errorbar(
     aes(ymin = lo, ymax = hi),
     width     = 0.15,
@@ -458,188 +462,159 @@ prop_booster_plot <- ggplot(prop_booster_summary, aes(x = serotype, y = median))
     labels = function(x) paste0(x, "%")
   ) +
   labs(x = "Serotype", title = "Proportion boosting by DENV serotype (Fiji)") +
-  theme_minimal(base_size = 12) +
+  theme_bw(base_size = 16) +
   theme(
-    panel.grid.major.x = element_blank(),
-    axis.text.x        = element_text(face = "plain")
+    axis.text.x = element_text(angle = 45, hjust = 1)
   )
 
 ggsave(here("outputs/figures/Fiji", "fiji_prop_boosting.png"), prop_booster_plot, width = 8, height = 5, dpi = 300)
 
 
 #-------------------------------------------------------------------------------
-
-# 13. Extract regression draws ----
-
-reg_draws <- fit_fiji_denv1$draws(
-  variables = c("theta_intercept", "theta_beta[1]"),
-  format    = "matrix"
-)
-
+# Section 3: Post-FMM analyses - understanding the covariates 
 #-------------------------------------------------------------------------------
 
-# 14. Build marginal effect curve over baseline titre range ----
+# 3.1. Compute individual-level P(booster) for all serotypes ----
 
-baseline_grid <- seq(
-  min(fiji_inputs$baseline_scaled, na.rm = TRUE),
-  max(fiji_inputs$baseline_scaled, na.rm = TRUE),
-  length.out = 300
-)
-
-# For each posterior draw compute predicted probability across baseline grid
-n_draws <- nrow(reg_draws)
-prob_mat <- matrix(NA_real_, n_draws, length(baseline_grid))
-
-for (i in seq_len(n_draws)) {
-  lp <- reg_draws[i, "theta_intercept"] +
-    reg_draws[i, "theta_beta[1]"] * baseline_grid
-  prob_mat[i, ] <- plogis(lp)
+for (s in serotypes) {
+  reg_draws <- fits_fiji[[s$name]]$draws(
+    variables = c("theta_intercept", "theta_beta[1]"),
+    format    = "matrix"
+  )
+  fiji_inputs[[s$p_booster_col]] <- plogis(
+    median(reg_draws[, "theta_intercept"]) +
+      median(reg_draws[, "theta_beta[1]"]) * fiji_inputs[[s$baseline_col]]
+  )
 }
 
-reg_df <- data.frame(
-  baseline_scaled = baseline_grid,
-  med  = apply(prob_mat, 2, median),
-  lo   = apply(prob_mat, 2, quantile, 0.025),
-  hi   = apply(prob_mat, 2, quantile, 0.975)
-)
-
 #-------------------------------------------------------------------------------
 
-# 15. Back-transform x-axis to original MFI scale (optional but readable) ----
+# 3.2. Odds ratios for baseline titre effect ----
 
-# Recover original mean and SD used to scale
-bs_mean <- mean(fiji_inputs$DENV1, na.rm = TRUE)  # <-- swap
-bs_sd   <- sd(fiji_inputs$DENV1, na.rm = TRUE)    # <-- swap
-
-reg_df <- reg_df |>
-  mutate(baseline_mfi = baseline_scaled * bs_sd + bs_mean)
-
-# Also compute individual-level fitted probability for rug/scatter
-fiji_inputs <- fiji_inputs |>
-  mutate(
-    p_booster_reg = plogis(
-      median(reg_draws[, "theta_intercept"]) +
-        median(reg_draws[, "theta_beta[1]"]) * baseline_scaled
-    )
+or_summary <- purrr::map_dfr(serotypes, function(s) {
+  draws <- fits_fiji[[s$name]]$draws("theta_beta[1]", format = "matrix")
+  or    <- exp(draws)
+  data.frame(
+    serotype = s$name,
+    median   = round(median(or), 2),
+    lo       = round(quantile(or, 0.025), 2),
+    hi       = round(quantile(or, 0.975), 2)
   )
+})
+
+print(or_summary)
+
+# Forest plot of ORs
+or_plot <- ggplot(or_summary, aes(x = median, y = serotype)) +
+  geom_vline(xintercept = 1, linetype = "dashed", colour = "grey50", linewidth = 0.5) +
+  geom_pointrange(
+    aes(xmin = lo, xmax = hi),
+    colour = "#2c7bb6", linewidth = 0.8, size = 0.6
+  ) +
+  geom_text(
+    aes(label = sprintf("%.2f (%.2f–%.2f)", median, lo, hi)),
+    hjust = -0.15, size = 3.5
+  ) +
+  scale_x_continuous(
+    name   = "Odds ratio (per unit SD increase in baseline MFI)",
+    limits = c(0, max(or_summary$hi) * 1.5)
+  ) +
+  labs(y = NULL, title = "Effect of baseline titre on probability of boosting (Fiji)") +
+  theme_bw(base_size = 16) +
+  theme(panel.grid.major.y = element_blank())
+
+ggsave(here("outputs/figures/Fiji", "fiji_or_baseline.png"), or_plot, width = 8, height = 5, dpi = 300)
 
 #-------------------------------------------------------------------------------
 
-# 16. Plot marginal effect of baseline titre on P(booster) ----
+# 3.3. Marginal effect curve: P(booster) across baseline titre range ----
 
-ggplot(reg_df, aes(x = baseline_mfi)) +
-  geom_ribbon(aes(ymin = lo, ymax = hi), fill = "#EE6677", alpha = 0.20) +
-  geom_line(aes(y = med), colour = "#EE6677", linewidth = 1.0) +
-  geom_rug(
-    data = fiji_inputs,
-    aes(x = DENV1),   # <-- swap
-    sides = "b", alpha = 0.3, linewidth = 0.3
-  ) +
-  scale_y_continuous(
-    labels = scales::percent_format(accuracy = 1),
-    limits = c(0, 1)
-  ) +
-  labs(
-    title    = "Effect of baseline titre on probability of antibody boosting",
-    subtitle = "Logistic regression component of Gaussian-Gamma BLCR (Fiji dengue NS1)",
-    x        = "Baseline MFI",
-    y        = "P(booster | baseline titre)",
-    caption  = "Shaded band = posterior 95% CrI. Rug = observed baseline values."
-  ) +
-  theme_minimal(base_size = 12) +
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major = element_line(colour = "grey93", linewidth = 0.3))
+reg_plots_marginal <- list()
 
-#-------------------------------------------------------------------------------
-
-# 17. P(booster) vs change in titre, coloured by baseline titre ----
-
-# Bin baseline into tertiles for readability
-fiji_inputs <- fiji_inputs |>
-  mutate(
-    baseline_tertile = cut(
-      DENV1,                        # <-- swap for your actual column
-      breaks = quantile(DENV1, c(0, 1/3, 2/3, 1), na.rm = TRUE),
-      labels = c("Low baseline", "Mid baseline", "High baseline"),
-      include.lowest = TRUE
-    )
+for (s in serotypes) {
+  reg_draws <- fits_fiji[[s$name]]$draws(
+    variables = c("theta_intercept", "theta_beta[1]"),
+    format    = "matrix"
   )
+  
+  baseline_grid <- seq(
+    min(fiji_inputs[[s$baseline_col]], na.rm = TRUE),
+    max(fiji_inputs[[s$baseline_col]], na.rm = TRUE),
+    length.out = 300
+  )
+  
+  prob_mat <- matrix(NA_real_, nrow(reg_draws), length(baseline_grid))
+  for (i in seq_len(nrow(reg_draws))) {
+    lp <- reg_draws[i, "theta_intercept"] + reg_draws[i, "theta_beta[1]"] * baseline_grid
+    prob_mat[i, ] <- plogis(lp)
+  }
+  
+  bs_mean <- mean(fiji_inputs[[s$mfi_col]], na.rm = TRUE)
+  bs_sd   <- sd(fiji_inputs[[s$mfi_col]],   na.rm = TRUE)
+  
+  reg_df <- data.frame(
+    baseline_mfi = baseline_grid * bs_sd + bs_mean,
+    med = apply(prob_mat, 2, median),
+    lo  = apply(prob_mat, 2, quantile, 0.025),
+    hi  = apply(prob_mat, 2, quantile, 0.975)
+  )
+  
+  reg_plots_marginal[[s$name]] <- ggplot(reg_df, aes(x = baseline_mfi)) +
+    geom_ribbon(aes(ymin = lo, ymax = hi), fill = "#EE6677", alpha = 0.20) +
+    geom_line(aes(y = med), colour = "#EE6677", linewidth = 1.0) +
+    geom_rug(data = fiji_inputs, aes(x = .data[[s$mfi_col]]),
+             sides = "b", alpha = 0.3, linewidth = 0.3) +
+    scale_y_continuous(labels = scales::percent_format(accuracy = 1), limits = c(0, 1)) +
+    labs(title = s$name, x = "Baseline MFI", y = "P(booster | baseline titre)",
+         caption = "Shaded band = posterior 95% CrI. Rug = observed baseline values.") +
+    theme_bw(base_size = 16) +
+    theme(panel.grid.minor = element_blank())
+}
 
-ggplot(fiji_inputs, aes(x = change_denv1_scaled, y = p_booster_denv1)) +
-  geom_point(aes(colour = baseline_tertile), alpha = 0.4, size = 1.2) +
-  geom_smooth(aes(colour = baseline_tertile),
-              method = "loess", se = FALSE, linewidth = 0.9, span = 0.6) +
-  geom_hline(yintercept = 0.5, linetype = "dashed", colour = "grey50", linewidth = 0.4) +
-  scale_colour_manual(
-    values = c("Low baseline"  = "#4477AA",
-               "Mid baseline"  = "#CCBB44",
-               "High baseline" = "#EE6677"),
-    name = "Baseline titre"
-  ) +
-  scale_y_continuous(labels = scales::percent_format(accuracy = 1), limits = c(0, 1)) +
-  labs(
-    title    = "Posterior P(booster) by change in titre, stratified by baseline",
-    subtitle = "Fiji dengue NS1 — individual-level posterior probabilities",
-    x        = "Change in MFI (scaled)",
-    y        = "P(booster)",
-    caption  = "Dashed line = 0.5 threshold. Smooths = LOESS."
-  ) +
-  theme_minimal(base_size = 12) +
-  theme(legend.position = "top", panel.grid.minor = element_blank(),
-        panel.grid.major = element_line(colour = "grey93", linewidth = 0.3))
+marginal_joint <- (reg_plots_marginal$DENV1 + reg_plots_marginal$DENV2) /
+  (reg_plots_marginal$DENV3 + reg_plots_marginal$DENV4)
 
-#-------------------------------------------------------------------------------
-
-# 18. Baseline titre vs change in antibody level ----
-
-ggplot(fiji_inputs,
-       aes(x = DENV1,             
-           y = change_denv1_scaled,
-           colour = p_booster_denv1)) +
-  geom_point(alpha = 0.5, size = 1.4) +
-  geom_hline(yintercept = 0, linetype = "dashed", colour = "grey50", linewidth = 0.4) +
-  scale_colour_gradientn(
-    colours  = c("#4477AA", "#FFFFFF", "#EE6677"),
-    values   = scales::rescale(c(0, 0.5, 1)),
-    limits   = c(0, 1),
-    name     = "P(booster)",
-    labels   = scales::percent_format(accuracy = 1)
-  ) +
-  labs(
-    title    = "Baseline titre vs change in antibody level",
-    subtitle = "Fiji dengue NS1 — points coloured by posterior P(booster)",
-    x        = "Baseline MFI",
-    y        = "Change in MFI (scaled)",
-    caption  = "Dashed line = zero change."
-  ) +
-  theme_minimal(base_size = 12) +
-  theme(legend.position = "right", panel.grid.minor = element_blank(),
-        panel.grid.major = element_line(colour = "grey93", linewidth = 0.3))
+ggsave(here("outputs/figures/Fiji", "fiji_marginal_baseline.png"), marginal_joint, width = 14, height = 10, dpi = 300)
 
 #-------------------------------------------------------------------------------
 
-# 19. Baseline titre vs Follow-up Titre by boosting probability ----
+# 3.4. Scatter: baseline titre vs change in MFI, coloured by P(booster) ----
 
-ggplot(inputs_fj |> filter(DENV1 > 0, DENV1B > 0),
-       aes(x = DENV1  / 1000,
-           y = DENV1B / 1000,
-           colour = denv1_prob)) +
-  geom_point(alpha = 0.5, size = 1.4) +
-  geom_abline(intercept = 0, slope = 1, linetype = "dashed",
-              colour = "grey40", linewidth = 0.5) +
-  scale_x_log10() + scale_y_log10() +
-  scale_colour_gradientn(
-    colours = c("#4477AA", "#FFFFFF", "#EE6677"),
-    values  = scales::rescale(c(0, 0.5, 1)),
-    limits  = c(0, 1),
-    name    = "P(booster)",
-    labels  = scales::percent_format(accuracy = 1)
+reg_plots_scatter <- list()
+
+for (s in serotypes) {
+  reg_plots_scatter[[s$name]] <- ggplot(
+    fiji_inputs,
+    aes(x = .data[[s$mfi_col]], y = .data[[s$delta_col]], colour = .data[[s$p_booster_col]])
   ) +
-  labs(x = "MFI t1 (thousands, log scale)",
-       y = "MFI t2 (thousands, log scale)",
-       title = "Fiji DENV1 — log(t1) vs log(t2)",
-       subtitle = "Coloured by P(booster) from Gaussian-Gamma BLCR") +
-  theme_minimal(base_size = 12) +
-  theme(legend.position = "right")
+    geom_point(alpha = 0.5, size = 1.4) +
+    geom_hline(yintercept = 0, linetype = "dashed", colour = "grey50", linewidth = 0.4) +
+    scale_colour_gradientn(
+      colours = c("#4477AA", "#FFFFFF", "#EE6677"),
+      values  = scales::rescale(c(0, 0.5, 1)),
+      limits  = c(0, 1),
+      name    = "P(booster)",
+      labels  = scales::percent_format(accuracy = 1)
+    ) +
+    labs(title = s$name, x = "Baseline MFI", y = "Change in MFI (scaled)",
+         caption = "Dashed line = zero change.") +
+    theme_bw(base_size = 16) +
+    theme(legend.position = "right", panel.grid.minor = element_blank())
+}
 
-inputs_fj$denv1_prob
+scatter_joint <- (reg_plots_scatter$DENV1 + reg_plots_scatter$DENV2) /
+  (reg_plots_scatter$DENV3 + reg_plots_scatter$DENV4)
+
+ggsave(here("outputs/figures/Fiji", "fiji_scatter_baseline.png"), scatter_joint, width = 14, height = 10, dpi = 300)
+
+
+
+
+
+
+
+
+
+
+
+
