@@ -273,6 +273,7 @@ ggplot() +
   
 
 ggsave(here("outputs", "fmm_schematic.png"), width = 12, height = 8, dpi = 300)
+ggsave(here("outputs/figures/fmm_schematic.svg"), width = 12, height = 8)
 
 
 # add the raw data underneath 
@@ -402,5 +403,8 @@ inputs <- inputs %>%
 inputs_fj <- inputs %>% select(-boost.x, -boost.y)
 
 saveRDS(inputs_fj, here("data", "inputs_fj.rds"))
+
+
+
 
 
