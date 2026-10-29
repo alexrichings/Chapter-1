@@ -21,24 +21,28 @@
 
 -------------------------------------------------------------------------------
   
-# 1. Packages ----
+# Load packages and data ----
 
+# Packages 
 library("ggplot2")
 library("dplyr")
 library("here")
 
--------------------------------------------------------------------------------
-  
-# 2. Import paired data ----
-
+# Paired data 
 df_wide <- readRDS(here("data", "df_wide.rds"))
 
--------------------------------------------------------------------------------
+# Population ≤ 20 years 
+young <- readRDS(here("data", "young.rds"))
 
-# 3. Data wrangling ----
+-------------------------------------------------------------------------------
+# Section 1 ----
+------------------------------------------------------------------------------- 
+  
+# 1.1. Edits to data ----
 
 # Create data frame to edit 
 inputs <- df_wide
+names(inputs)
 
 # Scale data to equalise scale and facilitate convergence 
 inputs$change_dengns1_1_scale <- inputs$change_dengns1_1/1000
@@ -46,16 +50,24 @@ inputs$change_dengns1_2_scale <- inputs$change_dengns1_2/1000
 inputs$change_dengns1_3_scale <- inputs$change_dengns1_3/1000
 inputs$change_dengns1_4_scale <- inputs$change_dengns1_4/1000
 
--------------------------------------------------------------------------------
+# Scale data to equalise scale and facilitate convergence 
+young$change_dengns1_1_scale <- young$change_dengns1_1/1000
+young$change_dengns1_2_scale <- young$change_dengns1_2/1000
+young$change_dengns1_3_scale <- young$change_dengns1_3/1000
+young$change_dengns1_4_scale <- young$change_dengns1_4/1000
 
-# 4. Model set up ----
+
+-------------------------------------------------------------------------------
+# Section 2 ----
+------------------------------------------------------------------------------- 
+  
+# 2.1: Model set up ----
   
 # Constrain mixing proportions within [0,1]
 transform.lambda <- function(x){1/(1 + exp(-x))}
 
 # fmm function 
 fitmixture <- function(param, val) {
-  
   lambda1 <- transform.lambda(param[["lambda1"]])
   
   # non-boost 
@@ -77,9 +89,7 @@ fitmixture <- function(param, val) {
   # likelihood 
   epsilon <- 1e-10
   -sum(log(lik + epsilon))
-  
 }
-
 
 # function to fit to different pathogens 
 fit_pathogen <- function(data, start_par, lower = NULL) {
@@ -113,22 +123,35 @@ fit_pathogen <- function(data, start_par, lower = NULL) {
 
 -------------------------------------------------------------------------------
   
-# 5. Model fitting  ----
+# 2.2. Model fitting  ----
 
 # Starting parameters 
 start_par <- c(a0 = 0, b0 = 1, a1 = 2, b1 = 3, lambda1 = 1)
 
-# fit fmm
+# Fit fmm
+
+# a) whole population 
 deng1_fmm <- fit_pathogen(inputs$change_dengns1_1_scale, c(b0 = 1, a1 = 2, b1 = 3, lambda1 = 1))
 deng2_fmm <- fit_pathogen(inputs$change_dengns1_2_scale, c(b0 = 1, a1 = 2, b1 = 3, lambda1 = 1))
 deng3_fmm <- fit_pathogen(inputs$change_dengns1_3_scale, c(b0 = 1, a1 = 2, b1 = 3, lambda1 = 1))
 deng4_fmm <- fit_pathogen(inputs$change_dengns1_4_scale, c(b0 = 1, a1 = 2, b1 = 3, lambda1 = 1))
 
-# store parameters 
 deng1_par <- deng1_fmm$par
 deng2_par <- deng2_fmm$par
 deng3_par <- deng3_fmm$par
 deng4_par <- deng4_fmm$par
+
+# b) population ≤ 20 years 
+youth_deng1_fmm <- fit_pathogen(young$change_dengns1_1_scale, c(b0 = 1, a1 = 2, b1 = 3, lambda1 = 1))
+youth_deng2_fmm <- fit_pathogen(young$change_dengns1_2_scale, c(b0 = 1, a1 = 2, b1 = 3, lambda1 = 1))
+youth_deng3_fmm <- fit_pathogen(young$change_dengns1_3_scale, c(b0 = 1, a1 = 2, b1 = 3, lambda1 = 1))
+youth_deng4_fmm <- fit_pathogen(young$change_dengns1_4_scale, c(b0 = 1, a1 = 2, b1 = 3, lambda1 = 1))
+
+youth_deng1_par <- youth_deng1_fmm$par
+youth_deng2_par <- youth_deng2_fmm$par
+youth_deng3_par <- youth_deng3_fmm$par
+youth_deng4_par <- youth_deng4_fmm$par
+
 
 # retrieve parameters 
 extract_params <- function(opt_par) {
@@ -141,13 +164,20 @@ extract_params <- function(opt_par) {
   )
 }
 
+# a) whole population 
 deng1_par <- extract_params(deng1_par)
 deng2_par <- extract_params(deng2_par)
 deng3_par <- extract_params(deng3_par)
 deng4_par <- extract_params(deng4_par)
 
+# b) population ≤ 20 years 
+youth_deng1_par <- extract_params(youth_deng1_par)
+youth_deng2_par <- extract_params(youth_deng2_par)
+youth_deng3_par <- extract_params(youth_deng3_par)
+youth_deng4_par <- extract_params(youth_deng4_par)
 
-# model components 
+
+# Specify model components 
 mixture_density <- function(x, pars) {
   
   normal <- dnorm(x, mean = pars$a0, sd = pars$b0)
@@ -156,7 +186,7 @@ mixture_density <- function(x, pars) {
   ((1 - pars$lambda1) * normal) + (pars$lambda1 * gamma)
 }
 
-# simulate data based off the optimised parameters 
+# Simulate data based off the optimised parameters 
 simulate_mixture <- function(data, pars, n = 1000) {
   
   data <- data[is.finite(data)] 
@@ -167,51 +197,47 @@ simulate_mixture <- function(data, pars, n = 1000) {
   data.frame(x = x_vals, y = y_vals)
 }
 
+# a) whole population 
 sim_deng1 <- simulate_mixture(inputs$change_dengns1_1_scale, deng1_par)
 sim_deng2 <- simulate_mixture(inputs$change_dengns1_2_scale, deng2_par)
 sim_deng3 <- simulate_mixture(inputs$change_dengns1_3_scale, deng3_par)
 sim_deng4 <- simulate_mixture(inputs$change_dengns1_4_scale, deng4_par)
 
+# b) population ≤ 20 years 
+youth_sim_deng1 <- simulate_mixture(young$change_dengns1_1_scale, youth_deng1_par)
+youth_sim_deng2 <- simulate_mixture(young$change_dengns1_2_scale, youth_deng2_par)
+youth_sim_deng3 <- simulate_mixture(young$change_dengns1_3_scale, youth_deng3_par)
+youth_sim_deng4 <- simulate_mixture(young$change_dengns1_4_scale, youth_deng4_par)
+
+
 -------------------------------------------------------------------------------
 
-# 6. FMM visualisation ----  
+# 2.3: FMM visualisation ----  
 
 # Plot components 
 
-# DENV1
-ggplot(data = sim_deng1, aes(x = x, y = y)) + 
-  geom_area(alpha = 0.7, fill = "lightgrey") + 
-  labs(x = "∆MFI", 
-       y = "Density", 
-       title = "DENV1 FMM") + 
-  theme_minimal()
+# Function to plot each component 
+plot_mfi <- function(data, figure_label, serotype, color) {
+  ggplot(data, aes(x = x, y = y)) + 
+    geom_area(alpha = 0.7, fill = color) + 
+    labs(x = figure_label, y = "Density", title = serotype) + 
+    theme_minimal()
+}
 
-# DENV2
-ggplot(data = sim_deng2, aes(x = x, y = y)) + 
-  geom_area(alpha = 0.7, fill = "lightgrey") + 
-  labs(x = "∆MFI", 
-       y = "Density", 
-       title = "DENV2 FMM") + 
-  theme_minimal()
+# a) Whole population 
+plot_mfi(sim_deng1, "∆MFI", "DENV1 FMM", "lightgrey")
+plot_mfi(sim_deng2, "∆MFI", "DENV2 FMM", "lightgrey")
+plot_mfi(sim_deng3, "∆MFI", "DENV3 FMM", "lightgrey")
+plot_mfi(sim_deng4, "∆MFI", "DENV4 FMM", "lightgrey")
 
-# DENV3
-ggplot(data = sim_deng3, aes(x = x, y = y)) + 
-  geom_area(alpha = 0.7, fill = "lightgrey") + 
-  labs(x = "∆MFI", 
-       y = "Density", 
-       title = "DENV3 FMM") + 
-  theme_minimal()
-
-# DENV4
-ggplot(data = sim_deng4, aes(x = x, y = y)) + 
-  geom_area(alpha = 0.7, fill = "lightgrey") + 
-  labs(x = "∆MFI", 
-       y = "Density", 
-       title = "DENV4 FMM") + 
-  theme_minimal()
+# b) Population ≤20 years 
+plot_mfi(youth_sim_deng1, "∆MFI", "DENV1 FMM (≤ 20 years)", "lightgrey")
+plot_mfi(youth_sim_deng2, "∆MFI", "DENV2 FMM (≤ 20 years)", "lightgrey")
+plot_mfi(youth_sim_deng3, "∆MFI", "DENV3 FMM (≤ 20 years)", "lightgrey")
+plot_mfi(youth_sim_deng4, "∆MFI", "DENV4 FMM (≤ 20 years)", "lightgrey")
 
 
-# function to create a df for individual component densities
+# Function to create a df for individual component densities
 comp_density <- function(pars, simulated_data){
   
   normal <- (1 - pars$lambda1) * dnorm(simulated_data$x, mean = pars$a0, sd = pars$b0)
@@ -225,66 +251,45 @@ comp_density <- function(pars, simulated_data){
   data.frame(x = x, y = y, component = component)
 }
 
+# a) Whole population 
 deng1_comp <- comp_density(deng1_par, sim_deng1)
 deng2_comp <- comp_density(deng2_par, sim_deng2)
 deng3_comp <- comp_density(deng3_par, sim_deng3)
 deng4_comp <- comp_density(deng4_par, sim_deng4)
 
+# b) Population ≤20 years 
+youth_deng1_comp <- comp_density(youth_deng1_par, youth_sim_deng1)
+youth_deng2_comp <- comp_density(youth_deng2_par, youth_sim_deng2)
+youth_deng3_comp <- comp_density(youth_deng3_par, youth_sim_deng3)
+youth_deng4_comp <- comp_density(youth_deng4_par, youth_sim_deng4)
 
-# plot components 
 
-# DENV1
-ggplot(deng1_comp, aes(x = x, y = y, color = component)) +
-  geom_line(size = 1.2) +
-  geom_area(data = subset(deng1_comp, component == "Mixture"), aes(x = x, y = y), fill = "white", 
-            alpha = 0.1, inherit.aes = FALSE) +
-  scale_color_manual(values = c("Mixture" = "black", "Normal" = "red", "Gamma" = "purple")) +
-  labs(
-    x = "∆MIA",
-    y = "Density",
-    title = "FMM DENV1"
-  ) +
-  theme_minimal() + 
-  coord_cartesian(xlim = c(-20, 50), ylim = c(0, 0.1))
+# Plotting 
 
-# DENV2 
-ggplot(deng2_comp, aes(x = x, y = y, color = component)) +
-  geom_line(size = 1.2) +
-  geom_area(data = subset(deng2_comp, component == "Mixture"), aes(x = x, y = y), fill = "white", alpha = 0.1, inherit.aes = FALSE) +
-  scale_color_manual(values = c("Mixture" = "black", "Normal" = "red", "Gamma" = "purple")) +
-  labs(
-    x = "∆MIA",
-    y = "Density",
-    title = "FMM DENV2"
-  ) +
-  theme_minimal() + 
-  coord_cartesian(xlim = c(-20, 50), ylim = c(0, 0.1))
+# Function to plot each FMM
+plot_fmm <- function(data, figure_label, serotype) {
+  ggplot(data, aes(x = x, y = y, color = component)) + 
+    geom_line(size = 1.2) + 
+    geom_area(data = subset(deng1_comp, component == "Mixture"), aes(x = x, y = y), fill = "white", alpha = 0.1, inherit.aes = FALSE) +
+    scale_color_manual(values = c("Mixture" = "black", "Normal" = "red", "Gamma" = "purple")) +
+    labs(x = figure_label, 
+         y = "Density", 
+         title = serotype) + 
+    theme_minimal()
+}
 
-# DENV3
-ggplot(deng3_comp, aes(x = x, y = y, color = component)) +
-  geom_line(size = 1.2) +
-  geom_area(data = subset(deng3_comp, component == "Mixture"), aes(x = x, y = y), fill = "white", alpha = 0.1, inherit.aes = FALSE) +
-  scale_color_manual(values = c("Mixture" = "black", "Normal" = "red", "Gamma" = "purple")) +
-  labs(
-    x = "∆MIA",
-    y = "Density",
-    title = "FMM DENV3"
-  ) +
-  theme_minimal() + 
-  coord_cartesian(xlim = c(-20, 50), ylim = c(0, 0.1))
+# a) Whole population 
+plot_fmm(deng1_comp, "∆MFI", "DENV1 FMM")
+plot_fmm(deng2_comp, "∆MFI", "DENV2 FMM")
+plot_fmm(deng3_comp, "∆MFI", "DENV3 FMM")
+plot_fmm(deng4_comp, "∆MFI", "DENV4 FMM")
 
-# DENV4
-ggplot(deng4_comp, aes(x = x, y = y, color = component)) +
-  geom_line(size = 1.2) +
-  geom_area(data = subset(deng4_comp, component == "Mixture"), aes(x = x, y = y), fill = "white", alpha = 0.1, inherit.aes = FALSE) +
-  scale_color_manual(values = c("Mixture" = "black", "Normal" = "red", "Gamma" = "purple")) +
-  labs(
-    x = "∆MIA",
-    y = "Density",
-    title = "FMM DENV4"
-  ) +
-  theme_minimal() + 
-  coord_cartesian(xlim = c(-20, 50), ylim = c(0, 0.1))
+# a) Population ≤ 20 years 
+plot_fmm(youth_deng1_comp, "∆MFI", "DENV1 FMM (≤ 20 years)")
+plot_fmm(youth_deng2_comp, "∆MFI", "DENV2 FMM (≤ 20 years)")
+plot_fmm(youth_deng3_comp, "∆MFI", "DENV3 FMM (≤ 20 years)")
+plot_fmm(youth_deng4_comp, "∆MFI", "DENV4 FMM (≤ 20 years)")
+
 
 -------------------------------------------------------------------------------
   
@@ -555,7 +560,5 @@ inputs <- inputs %>%
 
 inputs_dr <- inputs 
 # saveRDS(inputs, here("data", "inputs_dr.rds"))
-
-
 
 
