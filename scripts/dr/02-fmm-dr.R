@@ -572,12 +572,24 @@ inputs <- inputs %>%
   left_join(deng4_prob %>% select(serosurvey_id, deng4_prob = y), by = "serosurvey_id") 
 
 # b) Population ≤20 years 
+young <- young %>% 
+  left_join(youth_deng1_prob %>% select(serosurvey_id, deng1_prob = y), by = "serosurvey_id") %>% 
+  left_join(youth_deng2_prob %>% select(serosurvey_id, deng2_prob = y), by = "serosurvey_id") %>% 
+  left_join(youth_deng3_prob %>% select(serosurvey_id, deng3_prob = y), by = "serosurvey_id") %>% 
+  left_join(youth_deng4_prob %>% select(serosurvey_id, deng4_prob = y), by = "serosurvey_id")
 
+class(young$deng1_prob)
 -------------------------------------------------------------------------------
 
 # 9. Save data ---- 
 
+# a) Whole population 
 inputs_dr <- inputs 
 # saveRDS(inputs, here("data", "inputs_dr.rds"))
+
+# b) Population ≤ 20 years
+saveRDS(young, here("data", "young.rds"))
+
+
 
 
