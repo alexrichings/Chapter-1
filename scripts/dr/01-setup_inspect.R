@@ -87,21 +87,49 @@ plot_mfi <- function(data, input, figure_label, serotype, color) {
 # DENV-1: ≥739; DENV-2: ≥1777; DENV-3: ≥451; DENV-4: ≥420 
 
 # Plot baseline titre
-plot_mfi(df_wide, dengns1_1_mfi_sero, "∆MFI", "DENV1", "skyblue")
-plot_mfi(df_wide, dengns1_2_mfi_sero, "∆MFI", "DENV2", "skyblue")
-plot_mfi(df_wide, dengns1_3_mfi_sero, "∆MFI", "DENV3", "skyblue")
-plot_mfi(df_wide, dengns1_4_mfi_sero, "∆MFI", "DENV4", "skyblue")
+plot_mfi(df_wide, dengns1_1_mfi_sero, "MFI", "DENV1", "skyblue")
+plot_mfi(df_wide, dengns1_2_mfi_sero, "MFI", "DENV2", "skyblue")
+plot_mfi(df_wide, dengns1_3_mfi_sero, "MFI", "DENV3", "skyblue")
+plot_mfi(df_wide, dengns1_4_mfi_sero, "MFI", "DENV4", "skyblue")
 
 # Plot follow-up 
-plot_mfi(df_wide, dengns1_1_mfi_cohort, "∆MFI", "DENV1", "skyblue")
-plot_mfi(df_wide, dengns1_2_mfi_cohort, "∆MFI", "DENV2", "skyblue")
-plot_mfi(df_wide, dengns1_3_mfi_cohort, "∆MFI", "DENV3", "skyblue")
-plot_mfi(df_wide, dengns1_4_mfi_cohort, "∆MFI", "DENV4", "skyblue")
-
-
+plot_mfi(df_wide, dengns1_1_mfi_cohort, "MFI", "DENV1", "skyblue")
+plot_mfi(df_wide, dengns1_2_mfi_cohort, "MFI", "DENV2", "skyblue")
+plot_mfi(df_wide, dengns1_3_mfi_cohort, "MFI", "DENV3", "skyblue")
+plot_mfi(df_wide, dengns1_4_mfi_cohort, "MFI", "DENV4", "skyblue")
 
 -------------------------------------------------------------------------------
   
+# 2.2. Change in titre ----
 
+# Plot ∆MFI
+plot_mfi(df_wide, change_dengns1_1, "∆MFI", "Change in DENV1", "skyblue")
+plot_mfi(df_wide, change_dengns1_2, "∆MFI", "Change in DENV2", "skyblue")
+plot_mfi(df_wide, change_dengns1_3, "∆MFI", "Change in DENV3", "skyblue")
+plot_mfi(df_wide, change_dengns1_4, "∆MFI", "Change in DENV4", "skyblue")
 
+-------------------------------------------------------------------------------
+  
+# 2.3. Inspect for under 20 years ----
+
+# Filter by baseline age 
+young <- df_wide |> filter(age_sero <= 20)
+
+# Plot baseline titre
+plot_mfi(young, dengns1_1_mfi_sero, "MFI", "DENV1", "skyblue")
+plot_mfi(young, dengns1_2_mfi_sero, "MFI", "DENV2", "skyblue")
+plot_mfi(young, dengns1_3_mfi_sero, "MFI", "DENV3", "skyblue")
+plot_mfi(young, dengns1_4_mfi_sero, "MFI", "DENV4", "skyblue")
+
+# Plot follow-up 
+plot_mfi(young, dengns1_1_mfi_cohort, "MFI", "DENV1", "skyblue")
+plot_mfi(young, dengns1_2_mfi_cohort, "MFI", "DENV2", "skyblue")
+plot_mfi(young, dengns1_3_mfi_cohort, "MFI", "DENV3", "skyblue")
+plot_mfi(young, dengns1_4_mfi_cohort, "MFI", "DENV4", "skyblue")
+
+# Plot ∆MFI
+plot_mfi(young, change_dengns1_1, "∆MFI", "Change in DENV1", "skyblue")
+plot_mfi(young, change_dengns1_2, "∆MFI", "Change in DENV2", "skyblue")
+plot_mfi(young, change_dengns1_3, "∆MFI", "Change in DENV3", "skyblue")
+plot_mfi(young, change_dengns1_4, "∆MFI", "Change in DENV4", "skyblue")
 
