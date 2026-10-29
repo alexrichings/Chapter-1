@@ -313,6 +313,7 @@ post_prob <- function(data, pars, id){
   
 }
 
+# a) Whole population 
 deng1_prob <- post_prob(inputs$change_dengns1_1_scale, deng1_par, inputs$serosurvey_id)
 deng2_prob <- post_prob(inputs$change_dengns1_2_scale, deng2_par, inputs$serosurvey_id)
 deng3_prob <- post_prob(inputs$change_dengns1_3_scale, deng3_par, inputs$serosurvey_id)
@@ -323,224 +324,238 @@ summary(deng2_prob$y)
 summary(deng3_prob$y)
 summary(deng4_prob$y)
 
+# b) Population ≤ 20 years
+youth_deng1_prob <- post_prob(young$change_dengns1_1_scale, youth_deng1_par, young$serosurvey_id)
+youth_deng2_prob <- post_prob(young$change_dengns1_2_scale, youth_deng2_par, young$serosurvey_id)
+youth_deng3_prob <- post_prob(young$change_dengns1_3_scale, youth_deng3_par, young$serosurvey_id)
+youth_deng4_prob <- post_prob(young$change_dengns1_4_scale, youth_deng4_par, young$serosurvey_id)
+
+summary(youth_deng1_prob$y)
+summary(youth_deng2_prob$y)
+summary(youth_deng3_prob$y)
+summary(youth_deng4_prob$y)
+
+
+# Create a fine grid for plotting 
+prob_curve <- function(data, pars, n = 1000) {
+  
+  data <- data[is.finite(data)]
+  x    <- seq(min(data), max(data), length.out = n)
+  
+  normal       <- (1 - pars$lambda1) * dnorm(x, mean = pars$a0, sd = pars$b0)
+  gamma        <- pars$lambda1 * dgamma(pmax(x, 1e-10), shape = pars$a1, scale = pars$b1)
+  marginal_lik <- normal + gamma
+  posterior    <- gamma / marginal_lik
+  
+  data.frame(x = x, y = posterior)
+}
+
+# a) Whole population — plot curves
+deng1_prob_curve <- prob_curve(inputs$change_dengns1_1_scale, deng1_par)
+deng2_prob_curve <- prob_curve(inputs$change_dengns1_2_scale, deng2_par)
+deng3_prob_curve <- prob_curve(inputs$change_dengns1_3_scale, deng3_par)
+deng4_prob_curve <- prob_curve(inputs$change_dengns1_4_scale, deng4_par)
+
+# b) Population ≤ 20 years — plot curves
+youth_deng1_prob_curve <- prob_curve(young$change_dengns1_1_scale, youth_deng1_par)
+youth_deng2_prob_curve <- prob_curve(young$change_dengns1_2_scale, youth_deng2_par)
+youth_deng3_prob_curve <- prob_curve(young$change_dengns1_3_scale, youth_deng3_par)
+youth_deng4_prob_curve <- prob_curve(young$change_dengns1_4_scale, youth_deng4_par)
+
 -------------------------------------------------------------------------------
   
 # 7. Visualise boosting components & probability of boosting ---- 
 
-# scaling factor 
-ymax <- 0.125
+# Function for plotting full fmm 
+plot_model <- function(
+    inputs,
+    input_col,
+    comp,
+    prob,
+    title,
+    ymax     = 0.135,
+    xlims    = c(-15, 55),
+    binwidth = 4
+) {
+  
+  x_thresh <- prob$x[which.min(abs(prob$y - 0.5))]
+  
+  ggplot() +
+    geom_histogram(
+      data = inputs,
+      aes(x = {{ input_col }}, y = ..density..),
+      fill = "lightgrey", color = "black", binwidth = binwidth
+    ) +
+    geom_line(
+      data = subset(comp, component == "Normal"),
+      aes(x = x, y = y), color = "red", size = 2
+    ) +
+    geom_line(
+      data = subset(comp, component == "Gamma"),
+      aes(x = x, y = y), color = "purple", size = 2
+    ) +
+    geom_line(
+      data = subset(comp, component == "Mixture"),
+      aes(x = x, y = y), color = "black", linetype = "dashed", size = 2
+    ) +
+    geom_line(
+      data = prob,
+      aes(x = x, y = y * ymax), size = 2, linetype = "dashed", color = "#7994B2"
+    ) +
+    geom_vline(xintercept = x_thresh, linetype = "solid", colour = "black", size = 1) +
+    labs(x = "∆MFI", y = "Density", title = title) +
+    theme_minimal(base_size = 26) +
+    scale_y_continuous(
+      name     = "Density",
+      expand   = c(0, 0),
+      sec.axis = sec_axis(~ . / ymax, name = "Boosting Probability")
+    ) +
+    scale_x_continuous(expand = c(0, 0)) +
+    coord_cartesian(xlim = xlims, ylim = c(0, ymax * 1.05)) +
+    theme(
+      legend.position    = "none",
+      panel.grid         = element_blank(),
+      axis.line          = element_line(colour = "black"),
+      axis.ticks         = element_line(colour = "black"),
+      axis.title.y.right = element_text(angle = -90, colour = "#7994B2"),
+      axis.text.y.right  = element_text(colour = "#7994B2", hjust = 0.5),
+      axis.ticks.y.right = element_line(colour = "#7994B2"),
+      axis.line.y.right  = element_line(colour = "#7994B2"),
+      plot.title         = element_text(size = 26)
+    )
+}
 
+# a) Whole population 
+p1 <- plot_model(inputs, change_dengns1_1_scale, deng1_comp, deng1_prob_curve, "DENV1")
+p2 <- plot_model(inputs, change_dengns1_2_scale, deng2_comp, deng2_prob_curve, "DENV2")
+p3 <- plot_model(inputs, change_dengns1_3_scale, deng3_comp, deng3_prob_curve, "DENV3")
+p4 <- plot_model(inputs, change_dengns1_4_scale, deng4_comp, deng4_prob_curve, "DENV4")
 
-# DENV1
-x_deng1 <- deng1_prob$x[which.min(abs(deng1_prob$y - 0.5))]
+ggsave(here("outputs", "deng1_fmm_prob_plot.png"), plot = p1, width = 10, height = 8, dpi = 300)
+ggsave(here("outputs", "deng2_fmm_prob_plot.png"), plot = p2, width = 10, height = 8, dpi = 300)
+ggsave(here("outputs", "deng3_fmm_prob_plot.png"), plot = p3, width = 10, height = 8, dpi = 300)
+ggsave(here("outputs", "deng4_fmm_prob_plot.png"), plot = p4, width = 10, height = 8, dpi = 300)
 
-ggplot() +
-  geom_histogram(data = inputs, aes(x = change_dengns1_1_scale, y = ..density..), fill = "lightgrey", color = "black", binwidth = 4) + 
-  geom_line(data = subset(deng1_comp, component == "Normal"), aes(x = x, y = y), color = "red", size = 2) +
-  geom_line(data = subset(deng1_comp, component == "Gamma"), aes(x = x, y = y), color = "purple", size = 2) + 
-  geom_line(data = subset(deng1_comp, component == "Mixture"), aes(x = x, y = y), color = "black", linetype = "dashed", size = 2) +
-  geom_line(data = deng1_prob, aes(x = x, y = y * ymax), size = 2, linetype = "dashed", color = "#7994B2") + 
-  geom_vline(xintercept = x_deng1, linetype = "solid", colour = "black", size = 1) +
-  labs(x = "∆MFI", y = "Density", title = "DENV1") +
-  theme_minimal(base_size = 26) + 
-  scale_y_continuous(
-    name = "Density",
-    expand = c(0, 0),
-    sec.axis = sec_axis(~ . / ymax, name = "Boosting Probability")) +
-  scale_x_continuous(expand = c(0, 0)) +
-  coord_cartesian(xlim = c(-15, 55), ylim = c(0, ymax * 1.05)) +
-  theme(
-    legend.position    = "none",
-    panel.grid         = element_blank(),
-    axis.line          = element_line(colour = "black"),
-    axis.ticks         = element_line(colour = "black"),
-    axis.title.y.right = element_text(angle = -90, colour = "#7994B2"),
-    axis.text.y.right  = element_text(colour = "#7994B2", hjust = 0.5),
-    axis.ticks.y.right = element_line(colour = "#7994B2"),
-    axis.line.y.right  = element_line(colour = "#7994B2"),
-    plot.title         = element_text(size = 26)
-  )
+# b) Population ≤ 20 years 
+young_p1 <- plot_model(young, change_dengns1_1_scale, youth_deng1_comp, youth_deng1_prob_curve, "DENV1")
+young_p2 <- plot_model(young, change_dengns1_2_scale, youth_deng2_comp, youth_deng2_prob_curve, "DENV2")
+young_p3 <- plot_model(young, change_dengns1_3_scale, youth_deng3_comp, youth_deng3_prob_curve, "DENV3")
+young_p4 <- plot_model(young, change_dengns1_4_scale, youth_deng4_comp, youth_deng4_prob_curve, "DENV4")
 
-ggsave(here("outputs", "deng1_fmm_prob_plot.png"), width = 10, height = 8, dpi = 300)
+ggsave(here("outputs/figures/under20/", "young_deng1_fmm_prob_plot.png"), plot = young_p1, width = 10, height = 8, dpi = 300)
+ggsave(here("outputs/figures/under20/", "young_deng2_fmm_prob_plot.png"), plot = young_p2, width = 10, height = 8, dpi = 300)
+ggsave(here("outputs/figures/under20/", "young_deng3_fmm_prob_plot.png"), plot = young_p3, width = 10, height = 8, dpi = 300)
+ggsave(here("outputs/figures/under20/", "young_deng4_fmm_prob_plot.png"), plot = young_p4, width = 10, height = 8, dpi = 300)
 
-
-# deng2 
-x_deng2 <- deng2_prob$x[which.min(abs(deng2_prob$y - 0.5))]
-
-ggplot() +
-  geom_histogram(data = inputs, aes(x = change_dengns1_2_scale, y = ..density..), fill = "lightgrey", color = "black", binwidth = 4) + 
-  geom_line(data = deng2_comp, aes(x = x, y = y, color = component), size = 1) + 
-  geom_line(data = subset(deng2_comp, component == "Normal"), aes(x = x, y = y), color = "red", size = 2) +
-  geom_line(data = subset(deng2_comp, component == "Gamma"), aes(x = x, y = y), color = "purple", size = 2) + 
-  geom_line(data = subset(deng2_comp, component == "Mixture"), aes(x = x, y = y), color = "black", linetype = "dashed", size = 2) +
-  geom_line(data = deng2_prob, aes(x = x, y = y * ymax), size = 2, linetype = "dashed", color = "#7994B2") + 
-  geom_vline(xintercept = x_deng2, linetype = "solid", colour = "black", size = 1) +
-  labs(x = "∆MFI", y = "Density", title = "DENV2") +
-  theme_minimal(base_size = 26) + 
-  scale_y_continuous(
-    name = "Density",
-    expand = c(0, 0),
-    sec.axis = sec_axis(~ . / ymax, name = "Boosting Probability")) +
-  scale_x_continuous(expand = c(0, 0)) +
-  coord_cartesian(xlim = c(-15, 55), ylim = c(0, ymax * 1.05)) +
-  theme(
-    legend.position    = "none",
-    panel.grid         = element_blank(),
-    axis.line          = element_line(colour = "black"),
-    axis.ticks         = element_line(colour = "black"),
-    axis.title.y.right = element_text(angle = -90, colour = "#7994B2"),
-    axis.text.y.right  = element_text(colour = "#7994B2", hjust = 0.5),
-    axis.ticks.y.right = element_line(colour = "#7994B2"),
-    axis.line.y.right  = element_line(colour = "#7994B2"),
-    plot.title         = element_text(size = 26)
-  )
-
-ggsave(here("outputs", "deng2_fmm_prob_plot.png"), width = 10, height = 8, dpi = 300)
-
-# deng3 
-x_deng3 <- deng3_prob$x[which.min(abs(deng3_prob$y - 0.5))]
-
-ggplot() +
-  geom_histogram(data = inputs, aes(x = change_dengns1_3_scale, y = ..density..), fill = "lightgrey", color = "black", binwidth = 4) + 
-  geom_line(data = deng3_comp, aes(x = x, y = y, color = component), size = 1) + 
-  geom_line(data = subset(deng3_comp, component == "Normal"), aes(x = x, y = y), color = "red", size = 2) +
-  geom_line(data = subset(deng3_comp, component == "Gamma"), aes(x = x, y = y), color = "purple", size = 2) + 
-  geom_line(data = subset(deng3_comp, component == "Mixture"), aes(x = x, y = y), color = "black", linetype = "dashed", size = 2) +
-  geom_line(data = deng3_prob, aes(x = x, y = y * ymax), size = 2, linetype = "dashed", color = "#7994B2") + 
-  geom_vline(xintercept = x_deng3, linetype = "solid", colour = "black", size = 1) +
-  labs(x = "∆MFI", y = "Density", title = "DENV3") +
-  theme_minimal(base_size = 26) + 
-  scale_y_continuous(
-    name = "Density",
-    expand = c(0, 0),
-    sec.axis = sec_axis(~ . / ymax, name = "Boosting Probability")) +
-  scale_x_continuous(expand = c(0, 0)) +
-  coord_cartesian(xlim = c(-15, 55), ylim = c(0, ymax * 1.05)) +
-  theme(
-    legend.position    = "none",
-    panel.grid         = element_blank(),
-    axis.line          = element_line(colour = "black"),
-    axis.ticks         = element_line(colour = "black"),
-    axis.title.y.right = element_text(angle = -90, colour = "#7994B2"),
-    axis.text.y.right  = element_text(colour = "#7994B2", hjust = 0.5),
-    axis.ticks.y.right = element_line(colour = "#7994B2"),
-    axis.line.y.right  = element_line(colour = "#7994B2"),
-    plot.title         = element_text(size = 26)
-  )
-
-ggsave(here("outputs", "deng3_fmm_prob_plot.png"), width = 10, height = 8, dpi = 300)
-
-# deng4 
-x_deng4 <- deng4_prob$x[which.min(abs(deng4_prob$y - 0.5))]
-
-ggplot() +
-  geom_histogram(data = inputs, aes(x = change_dengns1_4_scale, y = ..density..), fill = "lightgrey", color = "black", binwidth = 4) + 
-  geom_line(data = deng4_comp, aes(x = x, y = y, color = component), size = 1) + 
-  geom_line(data = subset(deng4_comp, component == "Normal"), aes(x = x, y = y), color = "red", size = 2) +
-  geom_line(data = subset(deng4_comp, component == "Gamma"), aes(x = x, y = y), color = "purple", size = 2) + 
-  geom_line(data = subset(deng4_comp, component == "Mixture"), aes(x = x, y = y), color = "black", linetype = "dashed", size = 2) +
-  geom_line(data = deng4_prob, aes(x = x, y = y * ymax), size = 2, linetype = "dashed", color = "#7994B2") + 
-  geom_vline(xintercept = x_deng4, linetype = "solid", colour = "black", size = 1) +
-  labs(x = "∆MFI", y = "Density", title = "DENV4") +
-  theme_minimal(base_size = 26) + 
-  scale_y_continuous(
-    name = "Density",
-    expand = c(0, 0),
-    sec.axis = sec_axis(~ . / ymax, name = "Boosting Probability")) +
-  scale_x_continuous(expand = c(0, 0)) +
-  coord_cartesian(xlim = c(-15, 55), ylim = c(0, ymax * 1.05)) +
-  theme(
-    legend.position    = "none",
-    panel.grid         = element_blank(),
-    axis.line          = element_line(colour = "black"),
-    axis.ticks         = element_line(colour = "black"),
-    axis.title.y.right = element_text(angle = -90, colour = "#7994B2"),
-    axis.text.y.right  = element_text(colour = "#7994B2", hjust = 0.5),
-    axis.ticks.y.right = element_line(colour = "#7994B2"),
-    axis.line.y.right  = element_line(colour = "#7994B2"),
-    plot.title         = element_text(size = 26)
-  )
-
-ggsave(here("outputs", "deng4_fmm_prob_plot.png"), width = 10, height = 8, dpi = 300)
 
 
 # Facet all the plots 
+plot_facet_fmm <- function(
+    data,
+    comp_list,    # named list: list(DENV1 = deng1_comp, DENV2 = deng2_comp, ...)
+    prob_list,    # named list: list(DENV1 = deng1_prob_curve, ...)
+    ymax     = 0.135,
+    xlims    = c(-15, 55),
+    binwidth = 4
+) {
+  
+  serotypes <- c("DENV1", "DENV2", "DENV3", "DENV4")
+  cols      <- c("change_dengns1_1_scale", "change_dengns1_2_scale",
+                 "change_dengns1_3_scale", "change_dengns1_4_scale")
+  
+  comp_all <- bind_rows(mapply(
+    function(df, s) mutate(df, serotype = s),
+    comp_list, serotypes, SIMPLIFY = FALSE
+  ))
+  
+  prob_all <- bind_rows(mapply(
+    function(df, s) mutate(df, serotype = s),
+    prob_list, serotypes, SIMPLIFY = FALSE
+  ))
+  
+  inputs_long <- bind_rows(mapply(
+    function(col, s) mutate(data, serotype = s, value = .data[[col]]),
+    cols, serotypes, SIMPLIFY = FALSE
+  ))
+  
+  thresholds <- bind_rows(mapply(
+    function(df, s) data.frame(serotype = s, x = df$x[which.min(abs(df$y - 0.5))]),
+    prob_list, serotypes, SIMPLIFY = FALSE
+  ))
+  
+  # Relabel for display
+  label_map <- c("DENV1" = "DENV-1", "DENV2" = "DENV-2",
+                 "DENV3" = "DENV-3", "DENV4" = "DENV-4")
+  
+  comp_all$serotype    <- label_map[comp_all$serotype]
+  prob_all$serotype    <- label_map[prob_all$serotype]
+  inputs_long$serotype <- label_map[inputs_long$serotype]
+  thresholds$serotype  <- label_map[thresholds$serotype]
+  
+  ggplot() +
+    geom_histogram(
+      data = inputs_long,
+      aes(x = value, y = ..density..),
+      fill = "lightgrey", color = "black", binwidth = binwidth
+    ) +
+    geom_line(
+      data = subset(comp_all, component == "Normal"),
+      aes(x = x, y = y), color = "red", size = 2
+    ) +
+    geom_line(
+      data = subset(comp_all, component == "Gamma"),
+      aes(x = x, y = y), color = "purple", size = 2
+    ) +
+    geom_line(
+      data = subset(comp_all, component == "Mixture"),
+      aes(x = x, y = y), color = "black", linetype = "dashed", size = 2
+    ) +
+    geom_line(
+      data = prob_all,
+      aes(x = x, y = y * ymax), color = "#7994B2", linetype = "dashed", size = 2
+    ) +
+    geom_vline(data = thresholds, aes(xintercept = x), color = "black", size = 1) +
+    facet_wrap(~ serotype, ncol = 2) +
+    scale_y_continuous(
+      name     = "Density",
+      expand   = c(0, 0),
+      sec.axis = sec_axis(~ . / ymax, name = "Boosting Probability")
+    ) +
+    scale_x_continuous(expand = c(0, 0)) +
+    coord_cartesian(xlim = xlims, ylim = c(0, ymax * 1.05)) +
+    labs(x = "∆MFI", y = "Density") +
+    theme_minimal(base_size = 18) +
+    theme(
+      legend.position    = "none",
+      panel.grid         = element_blank(),
+      panel.border       = element_rect(colour = "black", fill = NA, linewidth = 1),
+      strip.text         = element_text(size = 18),
+      strip.background   = element_rect(fill = "grey90", colour = "black"),
+      axis.line          = element_line(colour = "black"),
+      axis.ticks         = element_line(colour = "black"),
+      axis.title.y.right = element_text(angle = -90, colour = "#7994B2"),
+      axis.text.y.right  = element_text(colour = "#7994B2"),
+      axis.ticks.y.right = element_line(colour = "#7994B2"),
+      axis.line.y.right  = element_line(colour = "#7994B2")
+    )
+}
 
-# make a df of all the component data 
-comp_all <- bind_rows(
-  mutate(deng1_comp, serotype = "DENV1"),
-  mutate(deng2_comp, serotype = "DENV2"),
-  mutate(deng3_comp, serotype = "DENV3"),
-  mutate(deng4_comp, serotype = "DENV4")
-)
-
-# make a df of all the probability data 
-prob_all <- bind_rows(
-  mutate(deng1_prob, serotype = "DENV1"),
-  mutate(deng2_prob, serotype = "DENV2"),
-  mutate(deng3_prob, serotype = "DENV3"),
-  mutate(deng4_prob, serotype = "DENV4")
-)
-
-# join the inputs data into a long form 
-inputs_long <- bind_rows(
-  mutate(inputs, serotype = "DENV1", value = change_dengns1_1_scale),
-  mutate(inputs, serotype = "DENV2", value = change_dengns1_2_scale),
-  mutate(inputs, serotype = "DENV3", value = change_dengns1_3_scale),
-  mutate(inputs, serotype = "DENV4", value = change_dengns1_4_scale)
-)
-
-# add the threshold lines for p > 0.5
-thresholds <- data.frame(
-  serotype = c("DENV1", "DENV2", "DENV3", "DENV4"),
-  x = c(x_deng1, x_deng2, x_deng3, x_deng4)
-)
-
-serotype_map <- c(
-  "DENV1" = "DENV-1",
-  "DENV2" = "DENV-2",
-  "DENV3" = "DENV-3",
-  "DENV4" = "DENV-4"
-)
-
-comp_all$serotype    <- serotype_map[comp_all$serotype]
-prob_all$serotype    <- serotype_map[prob_all$serotype]
-inputs_long$serotype <- serotype_map[inputs_long$serotype]
-thresholds$serotype  <- serotype_map[thresholds$serotype]
-
-
-# set max value 
-ymax <- 0.10
-
-ggplot() +
-  geom_histogram(data = inputs_long, aes(x = value, y = ..density..), fill = "lightgrey", color = "black", binwidth = 4) +
-  geom_line(data = subset(comp_all, component == "Normal"), aes(x = x, y = y), color = "red", size = 2) +
-  geom_line(data = subset(comp_all, component == "Gamma"), aes(x = x, y = y), color = "purple", size = 2) +
-  geom_line(data = subset(comp_all, component == "Mixture"), aes(x = x, y = y), color = "black", linetype = "dashed", size = 2) +
-  geom_line(data = prob_all, aes(x = x, y = y * ymax), color = "#7994B2", linetype = "dashed", size = 2) +
-  geom_vline(data = thresholds, aes(xintercept = x), color = "black", size = 1) +
-  facet_wrap(~ serotype, ncol = 2) +
-  scale_y_continuous(name = "Density", limits = c(0, ymax * 1.05), expand = c(0, 0), sec.axis = sec_axis(~ . / ymax, name = "Boosting Probability")) +
-  scale_x_continuous(expand = c(0, 0)) +
-  coord_cartesian(xlim = c(-15, 55)) +
-  labs(x = "∆MFI", y = "Density") +
-  theme_minimal(base_size = 18) +
-  theme(
-    legend.position = "none",
-    panel.grid = element_blank(),
-    panel.border = element_rect(colour = "black", fill = NA, linewidth = 1),
-    strip.text = element_text(size = 18),
-    strip.background = element_rect(fill = "grey90", colour = "black"),
-    axis.line = element_line(colour = "black"),
-    axis.ticks = element_line(colour = "black"),
-    axis.title.y.right = element_text(angle = -90, colour = "#7994B2"),
-    axis.text.y.right  = element_text(colour = "#7994B2"),
-    axis.ticks.y.right = element_line(colour = "#7994B2"),
-    axis.line.y.right  = element_line(colour = "#7994B2"),
-    plot.title = element_text(size = 18)
-  )
+# a) Whole population
+facet_deng <- plot_facet_fmm(
+  data      = inputs,
+  comp_list = list(DENV1 = deng1_comp, DENV2 = deng2_comp, DENV3 = deng3_comp, DENV4 = deng4_comp),
+  prob_list = list(DENV1 = deng1_prob_curve, DENV2 = deng2_prob_curve, DENV3 = deng3_prob_curve, DENV4 = deng4_prob_curve))
 
 ggsave(here("outputs", "facet_fmm_plot.png"), width = 14, height = 10, dpi = 300)
+
+
+# b) Population (≤ 20 years)
+young_facet_deng <- plot_facet_fmm(
+  data      = young,
+  comp_list = list(DENV1 = youth_deng1_comp, DENV2 = youth_deng2_comp, DENV3 = youth_deng3_comp, DENV4 = youth_deng4_comp),
+  prob_list = list(DENV1 = youth_deng1_prob_curve, DENV2 = youth_deng2_prob_curve, DENV3 = youth_deng3_prob_curve, DENV4 = youth_deng4_prob_curve))
+
+ggsave(here("outputs/figures/under20/", "young_facet_fmm_plot.png"), plot = young_facet_deng, width = 14, height = 10, dpi = 300)
 
 
 -------------------------------------------------------------------------------
@@ -548,11 +563,15 @@ ggsave(here("outputs", "facet_fmm_plot.png"), width = 14, height = 10, dpi = 300
 # 7. Join data ----
 
 # need to assign the probabilities of boosting back to each individual 
+
+# a) Whole population 
 inputs <- inputs %>% 
   left_join(deng1_prob %>% select(serosurvey_id, deng1_prob = y), by = "serosurvey_id") %>% 
   left_join(deng2_prob %>% select(serosurvey_id, deng2_prob = y), by = "serosurvey_id") %>% 
   left_join(deng3_prob %>% select(serosurvey_id, deng3_prob = y), by = "serosurvey_id") %>% 
   left_join(deng4_prob %>% select(serosurvey_id, deng4_prob = y), by = "serosurvey_id") 
+
+# b) Population ≤20 years 
 
 -------------------------------------------------------------------------------
 
