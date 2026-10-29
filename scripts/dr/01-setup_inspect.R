@@ -13,7 +13,7 @@
 
 --------------------------------------------------------------------------------
 
-# 1. Packages ----
+# Load packages ----
 
 library("readxl")
 library("here")
@@ -21,21 +21,23 @@ library("ggplot2")
 library("dplyr")
 
 -------------------------------------------------------------------------------
-
-# 2. Import raw data ----
+# Section 1: Load and manage data ----
+-------------------------------------------------------------------------------
+  
+# 1.1. Import raw data ----
 
 # df_0: national serological survey; df_1: follow up cohort 
 df_0 <- read_excel(here("data", "Copy of DR_serosurvey_MASTER_with_MBA_UPDATED.xlsx"))
 df_1 <- read_excel(here("data", "Copy of FINAL_COHORT_PLUS_MBA.xlsx"))
                    
-
 -------------------------------------------------------------------------------
 
-# 3. Generate paired data set & rename/mutate variables ---- 
+# 1.2. Generate paired data set & rename/mutate variables ---- 
 
 # round 1: x_sero 
 # round 2: x_cohort 
 
+# Include the specific variables to carry through 
 df_wide <- df_0 %>%
   select(serosurvey_id, age, gender, setting, occupation, education, province, 
          region, occupation_2, education2) %>%
@@ -64,53 +66,67 @@ df_wide <- df_0 %>%
     change_chik_e1   = chik_e1_mfi_cohort   - chik_e1_mfi_sero
   )
 
--------------------------------------------------------------------------------
-  
-# 4. Save data ---- 
-
+# Save the data 
 # saveRDS(df_wide, here("data", "df_wide.rds"))
 
 -------------------------------------------------------------------------------
+# Section 2: Inspect the data ----
+-------------------------------------------------------------------------------
+  
+# 2.1. Raw baseline titres ----
 
-# 5. Visual data inspection  ---- 
+# DENV-1 to DENV-4 
+
+
+
+-------------------------------------------------------------------------------
+  
 
 # Changes in MFI 
 # No major skew in any distribution - transformation may be unwarranted 
 
 # DENV1 
-ggplot(data = df_wide, mapping = aes(change_dengns1_1/1000)) + 
+ggplot(data = df_wide, mapping = aes(log(change_dengns1_1/1000))) + 
   geom_density(stat = "density", alpha = 0.7, fill = "skyblue") + 
   labs(x = "∆MFI",
        y = "Density",
        title = "DENV1") + 
-  theme_minimal() + 
+  theme_minimal()
+
++ 
   xlim(c(-15,15))
 
 # DENV2
-ggplot(data = df_wide, mapping = aes(change_dengns1_2/1000)) + 
+ggplot(data = df_wide, mapping = aes(log(change_dengns1_2/1000))) + 
   geom_density(stat = "density", alpha = 0.7, fill = "skyblue") + 
   labs(x = "∆MFI",
        y = "Density",
        title = "DENV2") + 
-  theme_minimal() + 
+  theme_minimal()
+
++ 
   xlim(c(-15,15))
 
 # DENV3
-ggplot(data = df_wide, mapping = aes((change_dengns1_3/1000))) + 
+ggplot(data = df_wide, mapping = aes(log(change_dengns1_3/1000))) + 
   geom_density(stat = "density", alpha = 0.7, fill = "skyblue") + 
   labs(x = "∆MFI",
        y = "Density",
        title = "DENV3") + 
-  theme_minimal() + 
+  theme_minimal() 
+
++ 
   coord_cartesian(xlim = c(-15, 15))
 
 # DENV4
-ggplot(data = df_wide, mapping = aes((change_dengns1_4/1000))) + 
+ggplot(data = df_wide, mapping = aes(log(change_dengns1_4/1000))) + 
   geom_density(stat = "density", alpha = 0.7, fill = "skyblue") + 
   labs(x = "∆MFI for DENV4",
        y = "Density",
        title = "Change in DENV4 MFI") + 
-  theme_minimal() + 
+  theme_minimal()
+
++ 
   coord_cartesian(xlim = c(-15, 15))
 
 
