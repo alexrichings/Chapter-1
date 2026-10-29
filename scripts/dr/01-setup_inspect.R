@@ -73,62 +73,35 @@ df_wide <- df_0 %>%
 # Section 2: Inspect the data ----
 -------------------------------------------------------------------------------
   
-# 2.1. Raw baseline titres ----
+# 2.1. Raw titres ----
 
-# DENV-1 to DENV-4 
+# Function to plot mfi
+plot_mfi <- function(data, input, figure_label, serotype, color) {
+  ggplot(data, aes({{ input }})) + 
+    geom_density(stat = "density", alpha = 0.7, fill = color) + 
+    labs(x = figure_label, y = "Density", title = serotype) + 
+    theme_minimal()
+}
+
+# Cut-off values for dengue serotypes 
+# DENV-1: ≥739; DENV-2: ≥1777; DENV-3: ≥451; DENV-4: ≥420 
+
+# Plot baseline titre
+plot_mfi(df_wide, dengns1_1_mfi_sero, "∆MFI", "DENV1", "skyblue")
+plot_mfi(df_wide, dengns1_2_mfi_sero, "∆MFI", "DENV2", "skyblue")
+plot_mfi(df_wide, dengns1_3_mfi_sero, "∆MFI", "DENV3", "skyblue")
+plot_mfi(df_wide, dengns1_4_mfi_sero, "∆MFI", "DENV4", "skyblue")
+
+# Plot follow-up 
+plot_mfi(df_wide, dengns1_1_mfi_cohort, "∆MFI", "DENV1", "skyblue")
+plot_mfi(df_wide, dengns1_2_mfi_cohort, "∆MFI", "DENV2", "skyblue")
+plot_mfi(df_wide, dengns1_3_mfi_cohort, "∆MFI", "DENV3", "skyblue")
+plot_mfi(df_wide, dengns1_4_mfi_cohort, "∆MFI", "DENV4", "skyblue")
 
 
 
 -------------------------------------------------------------------------------
   
-
-# Changes in MFI 
-# No major skew in any distribution - transformation may be unwarranted 
-
-# DENV1 
-ggplot(data = df_wide, mapping = aes(log(change_dengns1_1/1000))) + 
-  geom_density(stat = "density", alpha = 0.7, fill = "skyblue") + 
-  labs(x = "∆MFI",
-       y = "Density",
-       title = "DENV1") + 
-  theme_minimal()
-
-+ 
-  xlim(c(-15,15))
-
-# DENV2
-ggplot(data = df_wide, mapping = aes(log(change_dengns1_2/1000))) + 
-  geom_density(stat = "density", alpha = 0.7, fill = "skyblue") + 
-  labs(x = "∆MFI",
-       y = "Density",
-       title = "DENV2") + 
-  theme_minimal()
-
-+ 
-  xlim(c(-15,15))
-
-# DENV3
-ggplot(data = df_wide, mapping = aes(log(change_dengns1_3/1000))) + 
-  geom_density(stat = "density", alpha = 0.7, fill = "skyblue") + 
-  labs(x = "∆MFI",
-       y = "Density",
-       title = "DENV3") + 
-  theme_minimal() 
-
-+ 
-  coord_cartesian(xlim = c(-15, 15))
-
-# DENV4
-ggplot(data = df_wide, mapping = aes(log(change_dengns1_4/1000))) + 
-  geom_density(stat = "density", alpha = 0.7, fill = "skyblue") + 
-  labs(x = "∆MFI for DENV4",
-       y = "Density",
-       title = "Change in DENV4 MFI") + 
-  theme_minimal()
-
-+ 
-  coord_cartesian(xlim = c(-15, 15))
-
 
 
 
