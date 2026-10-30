@@ -15,8 +15,7 @@
 
 -------------------------------------------------------------------------------
 
-
-# 1. Install and load packages ----
+# Load packages and data ----
 
 library("here")
 library("mgcViz")
@@ -33,77 +32,66 @@ library("stringr")
 library("mgcv")
 library("scales")
 library("purrr")
+library("grid")
+library("gtable")
 
--------------------------------------------------------------------------------
-  
-# 2. Load data ----
+# helper function 
+source(here("R", "plot_helpers.R"))
 
+
+# Load data 
 inputs <- readRDS(here("data", "inputs_dr.rds"))
+young <- readRDS(here("data", "young.rds"))
 
 -------------------------------------------------------------------------------
-  
-# 3. Data recategorisation ----
+# Section 1: Descriptive analysis of exposure ----
+-------------------------------------------------------------------------------
 
-# Any evidence of boosting defined by p ≥ 0.5 for any serotype 
-inputs <- inputs %>% 
-  mutate(deng_boost = if_else(
-    pmax(as.numeric(deng1_prob), 
-         as.numeric(deng2_prob), 
-         as.numeric(deng3_prob), 
-         as.numeric(deng4_prob), na.rm = TRUE) >= 0.5,1L, 0L))
+# 1.1: Add variables and recategorise ----
 
-# Determine proportion with evidence of boosting 
-round(prop.table(table(inputs$deng_boost, useNA = "ifany")) * 100, 2) 
-
-
-# Group age
-
-# participants aged ≥6 years 
-inputs <- inputs %>%
-  mutate(age_group = cut(age_cohort, breaks = c(6, 20, 30, 40, 50, 60, 70, Inf), right = FALSE,
-                         labels = c("6–20", "20–30", "30–40", "40–50","50–60", "60–70", "70+")))
-
-# adolescents grouped as <20 years 
-inputs <- inputs %>%
-  mutate(age_u20 = cut(age_cohort, breaks = c(6, 20, Inf), right = FALSE,
-                       labels = c("under 20", "over 20"))) %>%
-  mutate(age_u20 = relevel(factor(age_u20), ref = "over 20"))
-
-# Education 
-inputs <- inputs %>%
-  mutate(
-    education_group = as.character(education_sero),
-    education_group = na_if(education_group, "dont_know_refuse"),
-    education_group = na_if(education_group, "NA"),
-    education_group = factor(education_group)
-  )
-
-# look at low education vs some degree of education 
-inputs <- inputs %>%
-  mutate(
-    education_group2 = case_when(
+# Wrap into a function 
+recategorise <- function(data) {
+  data %>%
+    mutate(deng_boost = if_else(
+      pmax(as.numeric(deng1_prob),
+           as.numeric(deng2_prob),
+           as.numeric(deng3_prob),
+           as.numeric(deng4_prob), na.rm = TRUE) >= 0.5, 1L, 0L)) %>%
+    mutate(age_group = cut(age_sero,
+                           breaks = c(6, 20, 30, 40, 50, 60, 70, Inf),
+                           include.lowest = TRUE,
+                           labels = c("6–20", "20–30", "30–40", "40–50", "50–60", "60–70", "70+"))) %>%
+    mutate(age_u20 = cut(age_sero,
+                         breaks = c(6, 20, Inf),
+                         include.lowest = TRUE,
+                         labels = c("under 20", "over 20")),
+           age_u20 = factor(age_u20, levels = c("over 20", "under 20"))) %>%
+    mutate(education_group = as.character(education_sero),
+           education_group = na_if(education_group, "dont_know_refuse"),
+           education_group = na_if(education_group, "NA"),
+           education_group = factor(education_group)) %>%
+    mutate(education_group2 = case_when(
       education_group %in% c("no_formal", "primary") ~ "Primary and under",
       education_group %in% c("secondary", "technical", "university") ~ "Beyond primary",
-      TRUE ~ NA_character_
-    ),
-    education_group2 = factor(education_group2)
-  )
+      TRUE ~ NA_character_),
+      education_group2 = factor(education_group2)) %>%
+    mutate(gender = ifelse(gender_sero == "Other", NA, gender_sero),
+           gender = factor(gender))
+}
 
-# "Other" category too small for regression 
-inputs <- inputs %>%
-  mutate(
-    gender = ifelse(gender_sero == "Other", NA, gender_sero),
-    gender = factor(gender)
-  )
+inputs <- recategorise(inputs)
+young  <- recategorise(young)
+
+# Boosting proportions
+round(prop.table(table(inputs$deng_boost, useNA = "ifany")) * 100, 2)
+round(prop.table(table(young$deng_boost,  useNA = "ifany")) * 100, 2)
 
 
 -------------------------------------------------------------------------------
-  
-# 4. Tabulating by exposure  ----
+ 
+# 1.2. Functions for analysis  ----
 
-# confidence intervals 
-
-# binomial confidence intervals 
+# Binomial confidence intervals 
 binom_ci_raw <- function(x, n) {
   if (n == 0 | is.na(x) | is.na(n)) return(NA_character_)
   ht <- binom.test(x, n, conf.level = 0.95)
@@ -114,7 +102,7 @@ binom_ci_raw <- function(x, n) {
   )
 }
 
-# difference in proportion confidence intervals
+# Confidence intervals for differences in proportion ----
 diff_ci <- function(x1, n1, x2, n2) {
   if (any(c(n1, n2) == 0) || any(is.na(c(x1, x2, n1, n2)))) return(NA_character_)
   pt <- prop.test(c(x1, x2), c(n1, n2), conf.level = 0.95, correct = FALSE)
@@ -130,22 +118,36 @@ diff_ci <- function(x1, n1, x2, n2) {
   )
 }
 
-# get complete set of data 
-complete_ids <- inputs %>% 
-  filter(!is.na(deng_boost), !is.na(deng1_prob), !is.na(dengns1_1_seropos_sero)) %>%
-  pull(serosurvey_id)
+-------------------------------------------------------------------------------
+  
+# 1.3. Antibody boosts  ----
 
-inputs_complete <- inputs %>% filter(serosurvey_id %in% complete_ids)
+# Ensure no missing values 
+get_complete <- function(data) {
+  complete_ids <- data %>%
+    filter(if_all(c(deng_boost,
+                    deng1_prob, deng2_prob, deng3_prob, deng4_prob,
+                    dengns1_1_seropos_sero, dengns1_2_seropos_sero,
+                    dengns1_3_seropos_sero, dengns1_4_seropos_sero),
+                  ~ !is.na(.x))) %>%
+    pull(serosurvey_id)
+  
+  data %>% filter(serosurvey_id %in% complete_ids)
+}
 
+inputs_complete <- get_complete(inputs)
+young_complete  <- get_complete(young)
 
-
-# a) tabulate by boost ----
-
+# specify names 
 serotypes <- c("DENV-1", "DENV-2", "DENV-3", "DENV-4", "DENV")
 boost_vars <- c("deng1_prob", "deng2_prob", "deng3_prob", "deng4_prob", "any")
 
+
+
+# a) Whole population 
+
+# Make a .csv table
 table_boost <- map2_dfr(serotypes, boost_vars, function(name, var) {
-  
   if (var == "any") {
     n_total <- sum(!is.na(inputs_complete$deng_boost))
     n_boost <- sum(inputs_complete$deng_boost == 1, na.rm = TRUE)
@@ -154,7 +156,6 @@ table_boost <- map2_dfr(serotypes, boost_vars, function(name, var) {
     n_total  <- sum(!is.na(prob_col))
     n_boost  <- sum(prob_col >= 0.5, na.rm = TRUE)
   }
-  
   tibble(
     Serotype = name,
     N        = n_total,
@@ -163,22 +164,60 @@ table_boost <- map2_dfr(serotypes, boost_vars, function(name, var) {
   )
 })
 
+write.csv(table_boost, here("outputs/tables/", "table_boost.csv"))
 
-# save table 
-write.csv(table_boost, here("outputs", "table_boost.csv"))
-bt <- table_boost %>%
+# Make a .docx table 
+table_boost_flex <- table_boost %>%
   flextable() %>%
   set_header_labels(Serotype = "Serotype", N = "N", n_boost = "N boost", propn = "Boosting %") %>%
   bold(part = "header") %>%
   fontsize(size = 9, part = "all") %>%
   autofit()
 
-save_as_docx(bt, path = here("outputs", "table_boost.docx"))
+save_as_docx(table_boost_flex, path = here("outputs/tables/", "table_boost.docx"))
 
 
 
-# b) tabulate boosts by age ----
+# b) Population ≤20 years
 
+# Make a .csv table 
+table_boost_young <- map2_dfr(serotypes, boost_vars, function(name, var) {
+  if (var == "any") {
+    n_total <- sum(!is.na(young_complete$deng_boost))
+    n_boost <- sum(young_complete$deng_boost == 1, na.rm = TRUE)
+  } else {
+    prob_col <- young_complete[[var]]
+    n_total  <- sum(!is.na(prob_col))
+    n_boost  <- sum(prob_col >= 0.5, na.rm = TRUE)
+  }
+  tibble(
+    Serotype = name,
+    N        = n_total,
+    n_boost  = n_boost,
+    propn    = binom_ci_raw(n_boost, n_total)
+  )
+})
+
+write.csv(table_boost_young, here("outputs/tables/", "table_boost_young.csv"))
+
+# Make a .docx table 
+table_boost_young_flex <- table_boost_young %>%
+  flextable() %>%
+  set_header_labels(Serotype = "Serotype", N = "N", n_boost = "N boost", propn = "Boosting %") %>%
+  bold(part = "header") %>%
+  fontsize(size = 9, part = "all") %>%
+  autofit()
+
+save_as_docx(table_boost_young_flex, path = here("outputs/tables/", "table_boost_young.docx"))
+
+
+-------------------------------------------------------------------------------
+  
+# 1.4. Antibody boosts stratified by age  ----
+
+# Make antibody boost table 
+
+# Make .csv file 
 table_boost_age <- inputs_complete %>%
   group_by(age_group) %>%
   summarise(
@@ -197,9 +236,10 @@ table_boost_age <- inputs_complete %>%
       )
   )
 
-# save table 
-write.csv(table_boost_age, here("outputs", "table_boost_age.csv"))
-bat <- table_boost_age %>%
+write.csv(table_boost_age, here("outputs/tables/", "table_boost_age.csv"))
+
+# Make .docx file 
+table_boost_age_flex <- table_boost_age %>%
   flextable() %>%
   set_header_labels(
     age_group = "Age group",
@@ -213,7 +253,8 @@ bat <- table_boost_age %>%
   hline(i = nrow(table_boost_age) - 1) %>%            
   autofit()
 
-save_as_docx(bat, path = here("outputs", "table_boost_age.docx"))
+save_as_docx(table_boost_age_flex, path = here("outputs/tables/", "table_boost_age_flex.docx"))
+
 
 # plot 
 p_boost_age <- table_boost_age %>%
@@ -235,14 +276,15 @@ p_boost_age <- table_boost_age %>%
 
 ggsave(here("outputs", "barplot_boost_age.png"), plot = p_boost_age, width = 8, height = 5, dpi = 300)
 
+-------------------------------------------------------------------------------
+  
+# 1.5. Seroconversion  ----
 
-# c) seroconversion ----
-
-# serostatus defined based off manufacturer cut-off thresholds 
-
+# Define names for tables 
 serotypes_conv <- c("DENV-1", "DENV-2", "DENV-3", "DENV-4", "DENV")
 sero_vars <- c("dengns1_1", "dengns1_2", "dengns1_3", "dengns1_4", "any")
 
+# a) Whole population 
 table_seropos <- map2_dfr(serotypes_conv, sero_vars, function(name, var) {
   
   if (var == "any") {
@@ -297,6 +339,64 @@ st <- table_seropos %>%
 
 save_as_docx(st, path = here("outputs", "table_seropos.docx"))
 
+# b) Population ≤ 20 years 
+
+# Create .csv file
+table_seropos_young <- map2_dfr(serotypes_conv, sero_vars, function(name, var) {
+  
+  if (var == "any") {
+    
+    year1_vars <- paste0(c("dengns1_1", "dengns1_2", "dengns1_3", "dengns1_4"), "_seropos_sero")
+    year2_vars <- paste0(c("dengns1_1", "dengns1_2", "dengns1_3", "dengns1_4"), "_seropos_cohort")
+    
+    n_total <- sum(!is.na(young_complete$deng_boost))
+    
+    n_pos1 <- sum(rowSums(young_complete[year1_vars] == 1, na.rm = TRUE) > 0)
+    n_pos2 <- sum(rowSums(young_complete[year2_vars] == 1, na.rm = TRUE) > 0)
+    
+  } else {
+    
+    year1_var <- paste0(var, "_seropos_sero")
+    year2_var <- paste0(var, "_seropos_cohort")
+    
+    n_total <- sum(!is.na(young_complete[[year1_var]]))
+    
+    n_pos1 <- sum(young_complete[[year1_var]] == 1, na.rm = TRUE)
+    n_pos2 <- sum(young_complete[[year2_var]] == 1, na.rm = TRUE)
+  }
+  
+  tibble(
+    Serotype  = name,
+    N         = n_total,
+    n_2021    = n_pos1,
+    sero_2021 = binom_ci_raw(n_pos1, n_total),
+    n_2022    = n_pos2,
+    sero_2022 = binom_ci_raw(n_pos2, n_total),
+    Difference = diff_ci(n_pos2, n_total, n_pos1, n_total)
+  )
+})
+
+write.csv(table_seropos_young, here("outputs/tables/", "table_seropos_young.csv"))
+
+# Create .docx file 
+table_seropos_young_flex <- table_seropos_young %>%
+  flextable() %>%
+  set_header_labels(
+    Serotype = "Serotype",
+    N = "N",
+    n_2021 = "Sero(+) (2021)",
+    sero_2021 = "Sero(+) % (2021)",
+    n_2022 = "Sero(+) (2022)",
+    sero_2022 = "Sero(+) % (2022)",
+    Difference = "Difference"
+  ) %>%
+  bold(part = "header") %>%
+  fontsize(size = 9, part = "all") %>%
+  autofit()
+
+save_as_docx(table_seropos_young_flex, path = here("outputs/tables/", "table_seropos_young_flex.docx"))
+
+
 -------------------------------------------------------------------------------
 
 # 5. Pre-regression variable checks ----
@@ -305,7 +405,7 @@ save_as_docx(st, path = here("outputs", "table_seropos.docx"))
 # important if continuous variables are used 
 
 # Initial titre against probability of boosting 
-gam_denv1_start_boost <- getViz(gam(data = inputs, formula = deng1_prob ~ s(log(dengns1_1_mfi_sero)), family = betar(link = "logit")))
+gam_denv1_start_boost <- getViz(gam(data = inputs, formula = deng1_prob ~ s(dengns1_1_mfi_sero), family = betar(link = "logit")))
 gam_denv2_start_boost <- getViz(gam(data = inputs, formula = deng2_prob ~ s(dengns1_2_mfi_sero), family = betar(link = "logit")))
 gam_denv3_start_boost <- getViz(gam(data = inputs, formula = deng3_prob ~ s(dengns1_3_mfi_sero), family = betar(link = "logit")))
 gam_denv4_start_boost <- getViz(gam(data = inputs, formula = deng4_prob ~ s(dengns1_4_mfi_sero), family = betar(link = "logit")))
@@ -398,8 +498,8 @@ for (jj in seq_along(model.list)) {
 }
 
 store.oddsTable
-write.csv(store.oddsTable, here("outputs", "lr_deng_fmm.csv"))
-
+write.csv(store.oddsTable, here("outputs", "lr_deng_fmm.csv"), row.names = FALSE)
+# lr_deng_fmm <- read_csv(here("outputs/tables/lr_deng_fmm.csv")) # read back in 
 
 # model 1b: multivariable regression 
 
@@ -454,8 +554,8 @@ for (jj in seq_along(model.list)) {
 }
 
 store.oddsTable
-write.csv(store.oddsTable, here("outputs", "mlr_deng_fmm.csv"))
-
+write.csv(store.oddsTable, here("outputs", "mlr_deng_fmm.csv"), row.names = FALSE)
+# mlr_deng_fmm <- read_csv(here("outputs/tables/lr_deng_fmm.csv")) # read back in 
 
 
 # Model 2: use seronegatives 
@@ -535,7 +635,7 @@ for (jj in seq_along(model.list)) {
 store.oddsTable
 
 write.csv(store.oddsTable, here("outputs", "lr_deng_fmm_seroneg.csv"))
-
+# lr_deng_fmm_seroneg <- read_csv(here("outputs/tables/lr_deng_fmm_seroneg.csv")) # read back in 
 -------------------------------------------------------------------------------
   
 # 7. Visualise regression outputs  ----
@@ -642,9 +742,9 @@ forest_fmm_compare <-
          aes(x = OR, y = var,
              colour = sample,
              group  = sample)) +
-  geom_vline(xintercept = 1, linetype = "dashed", colour = "grey40") +
-  geom_errorbarh(aes(xmin = LCL, xmax = UCL), position = pd, height = 0.2) +
-  geom_point(position = pd, size = 2.8) +
+  geom_vline(xintercept = 1, linetype = "dashed", colour = "black", linewidth = 1.0) +
+  geom_errorbarh(aes(xmin = LCL, xmax = UCL), position = pd, height = 0.4, linewidth = 1.5) +
+  geom_point(position = pd, size = 4.5) +
   scale_x_log10(
     breaks = c(0.01, 0.1, 1, 10, 100),
     labels = c("0.01", "0.1", "1.0", "10.0", "100.0")
@@ -655,87 +755,51 @@ forest_fmm_compare <-
     values = c("Seronegative" = "#F08080", "Total" = "#40BDB8"),
     labels = c("Seronegative" = "Seronegatives", "Total" = "All participants")) +
   scale_y_discrete(labels = c(
-    "age_u20"          = "Age under 20*",
+    "age_u20"          = "< 20 years*",
     "gender_sero"      = "Male",
-    "education_group2" = "Primary education or less",
+    "education_group2" = "≤ Primary education",
     "setting_sero"     = "Urban",
     "region"           = "Southeast region")) +
   labs(x = "Odds Ratio (log scale)", y = "") +
-  theme_minimal(base_size = 18) +
-  theme(
-    panel.border       = element_rect(fill = NA, linewidth = 0.8, colour = "grey35"),
-    panel.spacing      = unit(1.2, "lines"),
-    strip.background   = element_rect(fill = "grey85", colour = "grey35", linewidth = 0.8),
-    strip.text         = element_text(face = "bold"),
-    strip.placement    = "outside",
-    panel.grid.minor   = element_blank(),
-    panel.grid.major.y = element_blank(),
-    legend.position    = "bottom", 
+  theme_minimal(base_size = 28) +
+    theme(
+    #   strip.background = element_rect(fill = "#F2F2F2", colour = NA),
+    #   panel.border     = element_rect(fill = NA, linewidth = 2.0, colour = "black"),
+    # strip.text           = element_text(face = "bold"),
+      strip.text       = element_blank(),       # hides the DENV label
+      strip.background = element_blank(),       # removes the grey box
+      panel.border     = element_rect(fill = NA, linewidth = 2.0, colour = "black"),
+    strip.placement      = "outside",
+    panel.grid.minor     = element_blank(),
+    panel.grid.major.y   = element_blank(),
+    panel.grid.major.x   = element_blank(),
+    panel.ontop          = FALSE,
+    legend.position      = "bottom", 
     legend.justification = "centre",
-    legend.background    = element_rect(fill = "white", colour = "grey35", linewidth = 0.5),
-  )  +
-  annotate("segment", x = 0, xend = 1000, y = 1.8, yend = 1.8, linetype = "dashed", colour = "grey50", linewidth = 0.8) + 
+    legend.background    = element_rect(fill = "white", colour = NA),
+    legend.box.background = element_rect(fill = "white", colour = "black", linewidth = 1.0),
+    legend.box.margin    = margin(4, 4, 4, 4),
+    axis.text.y = element_text(colour = "black"),
+  ) +
+  annotate("segment", x = 0, xend = 1000, y = 1.8, yend = 1.8, linetype = "dashed", colour = "black", linewidth = 1.0) + 
   coord_cartesian(xlim = c(0.01, 100)) 
 
 forest_fmm_compare
 
+ggsave(here("outputs", "forest_fmm_compare_poster.png"), plot = forest_fmm_compare, width = 13, height = 7, dpi = 300)
+ggsave(here("outputs", "forest_fmm_compare_poster.svg"), plot = forest_fmm_compare, width = 13, height = 7)
 
-# Convert to gtable form 
-
-
-gt <- ggplotGrob(forest_fmm_compare)
-
-# Set dimensions 
-right_col <- 7
-top_row   <- 10
-bot_row   <- 10
-strip_row <- 8
-
-# Add labels 
+# add standard error ratios to side of plot 
 se_labels <- combined_fmm_df %>%
   filter(sample == "Total") %>%
   arrange(match(var, levels(combined_fmm_df$var))) %>%
   pull(SE_ratio_label) %>%
   rev()
 
-
-###### progress
-
-n_rows <- length(se_labels)
-
-header_grob <- grobTree(
-  rectGrob(gp = gpar(fill = "grey85", col = "grey35", lwd = 0.8 * .pt)),
-  textGrob("SE ratio", gp = gpar(fontface = "bold", fontsize = 18))
-)
-
-row_grobs <- lapply(se_labels, function(lab) {
-  grobTree(
-    rectGrob(gp = gpar(fill = "white", col = "grey35", lwd = 0.8 * .pt)),
-    textGrob(lab, gp = gpar(fontsize = 18), x = 0.5, y = 0.5)
-  )
-})
-
-se_column_grob <- frameGrob(
-  layout = grid.layout(nrow = n_rows, ncol = 1,
-                       heights = unit(rep(1, n_rows), "null"))
-)
-
-for (i in seq_along(row_grobs)) {
-  se_column_grob <- placeGrob(se_column_grob, row_grobs[[i]], row = i, col = 1)
-}
-
-gt      <- gtable_add_cols(gt, unit(2.8, "cm"), pos = right_col)
-new_col <- right_col + 1
-
-gt <- gtable_add_grob(gt, header_grob,
-                      t = strip_row, b = strip_row,
-                      l = new_col,  r = new_col, name = "se_header")
-gt <- gtable_add_grob(gt, se_column_grob,
-                      t = top_row,  b = bot_row,
-                      l = new_col,  r = new_col, name = "se_cells")
-
-# plot
+gt <- add_se_column(forest_fmm_compare, se_labels)
 grid.newpage()
 grid.draw(gt)
 
 ggsave(here("outputs", "forest_fmm_compare.png"), plot = gt, width = 13, height = 7, dpi = 300)
+
+
