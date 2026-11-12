@@ -257,9 +257,10 @@ denv1_comp$component <- factor(denv1_comp$component, levels = c("Gamma", "Normal
 ggplot() +
   geom_line(data = denv1_comp, aes(x = x, y = y, color = component), linewidth = 3.5) + 
   scale_color_manual(values = c("Mixture" = "black", "Gamma" = "purple", "Normal" = "red")) +
+  geom_line(data = deng1_prob, aes(x = boost, y = probability * ymax), size = 1, linetype = "dashed", color = "grey40") + 
   labs(
-    x = "∆MFI",
-    y = "Density",
+    x = "Change in antibody titre (x)",
+    y = "Density, M(x)",
   ) +
   theme_minimal(base_size = 34) + 
   theme(
@@ -402,5 +403,32 @@ inputs <- inputs %>%
 inputs_fj <- inputs %>% select(-boost.x, -boost.y)
 
 saveRDS(inputs_fj, here("data", "inputs_fj.rds"))
+
+----------------------------------------------------------------------------------------
+
+# 6. Schematic ----
+  
+# Plot for poster 
+fmm <- ggplot() +
+geom_line(data = denv1_comp, aes(x = x, y = y, color = component), linewidth = 3.5) + 
+scale_color_manual(values = c("Mixture" = "black", "Gamma" = "purple", "Normal" = "red")) +
+geom_line(data = deng1_prob, aes(x = boost, y = probability * 0.18), # <-- match ylim
+          size = 3.5, linetype = "dashed", color = "grey70") + 
+  geom_vline(xintercept = 0, linetype = "dashed", color = "black", linewidth = 2) + 
+labs(
+  x = "Change in antibody titre (x)",
+  y = "Density, M(x)",
+) +
+theme_minimal(base_size = 34) + 
+theme(
+  panel.grid = element_blank(),
+  axis.line = element_line(color = "black", linewidth = 2.5),
+  axis.text = element_blank(),
+  axis.ticks = element_blank(),
+  legend.position = "none"
+) + 
+coord_cartesian(xlim = c(-5, 20), ylim = c(0, 0.18))
+
+ggsave(here("outputs/figures/fmm_schematic.svg"), plot = fmm, width = 12, height = 8)
 
 
