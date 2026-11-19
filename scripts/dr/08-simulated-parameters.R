@@ -634,7 +634,7 @@ print(grid_summary, n = Inf)
 
 # 10.1. Coverage heatmap ----
 
-grid_summary |>
+heatmap_cov <- grid_summary |>
   filter(source == "fmm") |>
   ggplot(aes(x = factor(snr), y = factor(lambda), fill = coverage)) +
   geom_tile(colour = "white", linewidth = 0.5) +
@@ -659,11 +659,13 @@ grid_summary |>
     panel.border      = element_rect(colour = "black", fill = NA)
   )
 
+ggsave("outputs/simulation/heatmap_cov.png", heatmap_cov, width = 11, height = 5, dpi = 300)
+
 # -------------------------------------------------------------------------------
 
 # 10.2. Bias heatmap — FMM only
   
-grid_summary |>
+heatmap_bias <- grid_summary |>
   filter(source == "fmm") |>
   ggplot(aes(x = factor(snr), y = factor(lambda), fill = bias)) +
   geom_tile(colour = "white", linewidth = 0.5) +
@@ -687,11 +689,13 @@ grid_summary |>
     panel.border     = element_rect(colour = "black", fill = NA)
   )
 
+ggsave("outputs/simulation/heatmap_bias.png", heatmap_bias, width = 11, height = 5, dpi = 300)
+
 # -------------------------------------------------------------------------------
   
 # 10.3. RMSE heatmap — FMM only
 
-grid_summary |>
+heatmap_rmse <- grid_summary |>
   filter(source == "fmm") |>
   ggplot(aes(x = factor(snr), y = factor(lambda), fill = rmse)) +
   geom_tile(colour = "white", linewidth = 0.5) +
@@ -708,3 +712,6 @@ grid_summary |>
     strip.background = element_rect(fill = "grey85", colour = "black"),
     panel.border     = element_rect(colour = "black", fill = NA)
   )
+
+ggsave("outputs/simulation/heatmap_rmse.png", heatmap_rmse, width = 11, height = 5, dpi = 300)
+
